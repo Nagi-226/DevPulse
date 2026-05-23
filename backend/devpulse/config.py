@@ -45,5 +45,11 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     CACHE_TTL: int = 3600
 
+    # ── 调度器 ──────────────────────────────────────────
+    SCHEDULER_ENABLED: bool = True
+    SCHEDULER_CRON_DAY: str = "mon"
+    SCHEDULER_CRON_HOUR: int = 9
+    SCHEDULER_CRON_MINUTE: int = 0
+
 
 settings = Settings()

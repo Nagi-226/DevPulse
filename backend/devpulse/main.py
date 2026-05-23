@@ -9,13 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from devpulse import __version__
 from devpulse.api.endpoints.repos import router as repos_router
+from devpulse.api.endpoints.scheduler import router as scheduler_router
 from devpulse.config import settings
 from devpulse.core.database import Database
+from devpulse.services.scheduler import DevPulseScheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理：启动时初始化数据库，关闭时释放资源."""
+    """应用生命周期管理：启动时初始化数据库与调度器，关闭时释放资源."""
     # Startup
     db = Database(
         url=settings.DATABASE_URL,
@@ -27,10 +29,25 @@ async def lifespan(app: FastAPI):
     app.state.db = db
     app.state.settings = settings
 
+    if settings.SCHEDULER_ENABLED:
+        scheduler = DevPulseScheduler()
+        scheduler.add_weekly_job(
+            day_of_week=settings.SCHEDULER_CRON_DAY,
+            hour=settings.SCHEDULER_CRON_HOUR,
+            minute=settings.SCHEDULER_CRON_MINUTE,
+        )
+        scheduler.start()
+        app.state.scheduler = scheduler
+
     yield
 
     # Shutdown
-    await db.close()
+    scheduler = getattr(app.state, "scheduler", None)
+    if scheduler:
+        scheduler.shutdown()
+    db = getattr(app.state, "db", None)
+    if db:
+        await db.close()
 
 
 app = FastAPI(
@@ -50,6 +67,7 @@ app.add_middleware(
 
 # 挂载仓库与周报 API 路由
 app.include_router(repos_router)
+app.include_router(scheduler_router)
 
 
 @app.get("/health")
