@@ -19,6 +19,13 @@ class Settings(BaseSettings):
 
     # ── GitHub ──────────────────────────────────────────
     GITHUB_TOKEN: str = ""
+    GITHUB_API_BASE_URL: str = "https://api.github.com"
+    GITHUB_TRENDING_URL: str = "https://github.com/trending"
+
+    # ── 爬虫 ────────────────────────────────────────────
+    CRAWLER_TIMEOUT: int = 30
+    CRAWLER_MAX_RETRIES: int = 3
+    CRAWLER_USER_AGENT: str = "DevPulse/0.0.2"
 
     # ── LLM ─────────────────────────────────────────────
     OPENAI_API_KEY: str = ""

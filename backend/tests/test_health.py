@@ -1,6 +1,8 @@
 """健康检查端点测试."""
+
 import pytest
 from httpx import ASGITransport, AsyncClient
+
 from devpulse.main import app
 
 
