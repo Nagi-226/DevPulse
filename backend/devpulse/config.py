@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     # ── 数据库 ──────────────────────────────────────────
     DATABASE_URL: str = "sqlite+aiosqlite:///./devpulse.db"
+    DATABASE_ECHO: bool = False
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_MAX_OVERFLOW: int = 10
 
     # ── GitHub ──────────────────────────────────────────
     GITHUB_TOKEN: str = ""
