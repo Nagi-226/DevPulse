@@ -1,0 +1,55 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.so
+.Python
+env/
+venv/
+.venv/
+*.db
+*.sqlite3
+.env
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+*.pyo
+.python-version
+pip-wheel-metadata/
+dmypy.json
+.pytype/
+
+# ── Node / Vite ────────────────────────────────────────────
+node_modules/
+desktop/dist/
+*.local
+
+# ── Tauri / Rust ────────────────────────────────────────
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+*.pdb
+
+# ── IDE & Editors ─────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── OS ─────────────────────────────────────────────────────
+Desktop.ini
+$RECYCLE.BIN/
+
+# ── Misc ───────────────────────────────────────────────────
+*.log
+*.tmp
+temp/

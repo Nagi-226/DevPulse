@@ -1,0 +1,23 @@
+# DevPulse Backend — 开发依赖
+# 生成方式: pip-compile pyproject.toml (via pip-tools)
+# 或: pip install -e ".[dev]"
+
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+httpx==0.28.1
+playwright==1.52.0
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+aiosqlite==0.20.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+apscheduler==3.11.0
+python-dotenv==1.0.1
+rich==13.9.4
+openai==1.58.1
+anthropic==0.39.0
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+ruff==0.8.6
+pyright==1.1.390

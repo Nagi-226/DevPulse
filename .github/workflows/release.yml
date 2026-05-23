@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-tauri:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "DevPulse v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: devpulse-desktop-${{ github.ref_name }}
+          path: desktop/src-tauri/target/release/bundle/
+
+  build-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+      - name: Build binary
+        run: pyinstaller --onefile --name devpulse-server devpulse/main.py
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: devpulse-backend-${{ github.ref_name }}
+          path: backend/dist/
