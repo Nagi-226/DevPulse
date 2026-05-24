@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Repo } from "../types";
+import { api } from "../utils/api-client";
 
 /** Trending 页面状态接口 */
 interface TrendingState {
@@ -8,11 +9,13 @@ interface TrendingState {
   error: string | null;
   language: string;
   since: "daily" | "weekly" | "monthly";
+  useApi: boolean;
 
-  /** 获取 Trending 数据（开发期使用 mock） */
+  /** 获取 Trending 数据（先尝试 API，失败后降级到 Mock） */
   fetchTrending: () => Promise<void>;
   setLanguage: (lang: string) => void;
   setSince: (since: "daily" | "weekly" | "monthly") => void;
+  setUseApi: (useApi: boolean) => void;
 }
 
 /** 10 个 AI/ML 领域的 mock 项目数据 */
@@ -271,7 +274,7 @@ const MOCK_REPOS: Repo[] = [
 
 /**
  * Zustand store：管理 Trending 列表的数据状态。
- * 开发阶段使用内置 mock 数据，后续接入 /api/v1/trending 接口。
+ * 默认使用真实 API，失败后自动降级到内置 mock 数据。
  */
 export const useTrendingStore = create<TrendingState>((set, get) => ({
   repos: [],
@@ -279,29 +282,50 @@ export const useTrendingStore = create<TrendingState>((set, get) => ({
   error: null,
   language: "all",
   since: "weekly",
+  useApi: true,
 
   fetchTrending: async () => {
-    const { since } = get();
+    const { since, language, useApi } = get();
     set({ loading: true, error: null });
 
-    // 开发期：模拟网络延迟后返回 mock 数据
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      // 根据 since 过滤 mock 数据（所有 mock 数据都是 weekly，这里仅演示）
-      const filtered =
-        since === "weekly"
-          ? MOCK_REPOS
-          : MOCK_REPOS.filter((r) => r.trending_since === since);
-      set({ repos: filtered, loading: false });
+      if (useApi) {
+        const response = await api.getTrending(since, language === "all" ? "" : language);
+        set({ repos: response.data, loading: false });
+      } else {
+        // Mock 降级
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        const filtered =
+          since === "weekly"
+            ? MOCK_REPOS
+            : MOCK_REPOS.filter((r) => r.trending_since === since);
+        set({ repos: filtered, loading: false });
+      }
     } catch {
-      set({ error: "获取 Trending 数据失败，请重试", loading: false });
+      // API 失败时降级到 Mock
+      if (useApi) {
+        const filtered =
+          since === "weekly"
+            ? MOCK_REPOS
+            : MOCK_REPOS.filter((r) => r.trending_since === since);
+        set({
+          repos: filtered,
+          loading: false,
+          error: "API 连接失败，已切换到离线数据",
+        });
+      } else {
+        set({ error: "获取 Trending 数据失败，请重试", loading: false });
+      }
     }
   },
 
   setLanguage: (lang: string) => set({ language: lang }),
   setSince: (since: "daily" | "weekly" | "monthly") => {
     set({ since });
-    // 切换时间范围后自动重新获取
+    useTrendingStore.getState().fetchTrending();
+  },
+  setUseApi: (useApi: boolean) => {
+    set({ useApi });
     useTrendingStore.getState().fetchTrending();
   },
 }));

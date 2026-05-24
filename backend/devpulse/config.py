@@ -51,5 +51,8 @@ class Settings(BaseSettings):
     SCHEDULER_CRON_HOUR: int = 9
     SCHEDULER_CRON_MINUTE: int = 0
 
+    # ── CORS ────────────────────────────────────────────
+    CORS_ORIGINS: list[str] = ["http://localhost:1420", "http://localhost:5173", "tauri://localhost"]
+
 
 settings = Settings()
