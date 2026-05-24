@@ -2,18 +2,22 @@
 chcp 65001 >nul
 :: dev.bat — DevPulse 开发环境一键启动 (v0.0.9)
 :: 从项目根目录或任意位置运行均可，自动定位项目路径
+:: 默认 META_GPT_ENABLED=false，如需启用请手动修改为 true
 
 set PROJECT_ROOT=%~dp0..
+set META_GPT_ENABLED=false
 cd /d "%PROJECT_ROOT%"
 
 echo ========================================
 echo   DevPulse 开发环境启动
 echo ========================================
 echo.
+echo [配置] META_GPT_ENABLED = %META_GPT_ENABLED%
+echo.
 
 :: 1. 启动后端 FastAPI (端口 8000)
 echo [1/3] 启动后端 (FastAPI :8000) ...
-start "DevPulse Backend" cmd /k "cd /d "%PROJECT_ROOT%\backend" && uvicorn devpulse.main:app --reload --port 8000"
+start "DevPulse Backend" cmd /k "cd /d "%PROJECT_ROOT%\backend" && set META_GPT_ENABLED=%META_GPT_ENABLED% && uvicorn devpulse.main:app --reload --port 8000"
 
 :: 2. 等待后端启动
 timeout /t 3 /nobreak >nul

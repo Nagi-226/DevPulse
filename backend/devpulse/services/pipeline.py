@@ -1,12 +1,14 @@
 """DevPulse 周报生成流水线编排。
 
 爬虫 → 存储 → 摘要 → 周报 四阶段异步流水线。
+支持原生流水线（默认）和 MetaGPT 多 Agent 流水线（通过 META_GPT_ENABLED 开关切换）。
 """
 
 import logging
 from datetime import datetime, timedelta
 from typing import Any
 
+from devpulse.config import settings
 from devpulse.services.crawler import CrawlerService
 from devpulse.services.storage import StorageService
 
@@ -17,6 +19,7 @@ class Pipeline:
     """周报生成流水线编排器。
 
     整合爬虫、存储、摘要三个阶段，提供一键式周报生成入口。
+    当 META_GPT_ENABLED=True 时，自动切换为 MetaGPT 多 Agent 流水线。
     """
 
     def __init__(
@@ -26,6 +29,7 @@ class Pipeline:
     ):
         self.crawler = crawler
         self.storage = storage
+        self._meta_gpt_coordinator = None
 
     async def run_weekly_report(
         self,
@@ -35,15 +39,32 @@ class Pipeline:
     ) -> dict[str, Any]:
         """执行完整周报生成流水线。
 
-        Phase 1: 爬取 GitHub Trending
-        Phase 2: 存储到数据库
-        Phase 3: LLM 摘要生成
-        Phase 4: 生成周报总结
+        根据 META_GPT_ENABLED 开关选择执行路径：
+        - False（默认）：原生流水线（爬虫 → 存储 → 摘要 → 周报）
+        - True：MetaGPT 多 Agent 流水线（Crawler → Analyzer → Summarizer → Publisher）
 
         Returns:
             dict: 包含各阶段结果的汇总信息
         """
+        if settings.META_GPT_ENABLED:
+            return await self._run_meta_gpt_pipeline(language=language, since=since, top_n=top_n)
+        return await self._run_native_pipeline(language=language, since=since, top_n=top_n)
+
+    async def _run_native_pipeline(
+        self,
+        language: str = "",
+        since: str = "weekly",
+        top_n: int = 25,
+    ) -> dict[str, Any]:
+        """原生流水线：爬虫 → 存储 → 摘要 → 周报。
+
+        Phase 1: 爬取 GitHub Trending
+        Phase 2: 存储到数据库
+        Phase 3: LLM 摘要生成
+        Phase 4: 生成周报总结
+        """
         report = {
+            "pipeline": "Native",
             "started_at": datetime.utcnow().isoformat(),
             "language": language,
             "since": since,
@@ -99,3 +120,35 @@ class Pipeline:
 
         report["finished_at"] = datetime.utcnow().isoformat()
         return report
+
+    async def _run_meta_gpt_pipeline(
+        self,
+        language: str = "",
+        since: str = "weekly",
+        top_n: int = 25,
+    ) -> dict[str, Any]:
+        """MetaGPT 多 Agent 流水线。
+
+        Crawler Agent → Analyzer Agent → Summarizer Agent → Publisher Agent
+        """
+        from devpulse.pipeline.meta_gpt_coordinator import MetaGPTCoordinator
+
+        if self._meta_gpt_coordinator is None:
+            self._meta_gpt_coordinator = MetaGPTCoordinator()
+
+        logger.info("使用 MetaGPT 多 Agent 流水线")
+        result = await self._meta_gpt_coordinator.run(language=language, since=since, top_n=top_n)
+
+        # 转换为统一格式
+        return {
+            "pipeline": "MetaGPT",
+            "started_at": datetime.utcnow().isoformat(),
+            "language": language,
+            "since": since,
+            "phase1_crawl": f"MetaGPT: {result['phases']['crawler']}",
+            "phase2_store": f"MetaGPT: {result['phases']['analyzer']}",
+            "phase3_summarize": f"MetaGPT: {result['phases']['summarizer']}",
+            "phase4_report": f"MetaGPT: {result['phases']['publisher']}",
+            "errors": [],
+            "finished_at": datetime.utcnow().isoformat(),
+        }
