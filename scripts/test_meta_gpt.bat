@@ -29,9 +29,9 @@ echo.
 :: 验证 Agent 实例化
 echo [2/4] 验证 Agent 实例化...
 cd /d "%PROJECT_ROOT%\backend"
-python -c "from devpulse.pipeline.meta_gpt_coordinator import MetaGPTCoordinator; c = MetaGPTCoordinator(); print('  ✅ MetaGPTCoordinator 已就绪')" 2>&1
+python -c "from devpulse.pipeline.meta_gpt_coordinator import MetaGPTCoordinator; c = MetaGPTCoordinator(); print('  [PASS] MetaGPTCoordinator 已就绪')" 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo   ❌ MetaGPTCoordinator 初始化失败
+    echo   [FAIL] MetaGPTCoordinator 初始化失败
     goto :error
 )
 echo.
@@ -46,7 +46,7 @@ echo [4/4] 触发 MetaGPT 流水线 (python cli.py fetch) ...
 cd /d "%PROJECT_ROOT%\backend"
 python -m devpulse.cli.main fetch 2>&1 | findstr /I "MetaGPT"
 if %ERRORLEVEL% NEQ 0 (
-    echo   ⚠ 未检测到 MetaGPT 输出 — 请检查日志
+    echo   [WARN] 未检测到 MetaGPT 输出 — 请检查日志
 ) else (
     echo   ✅ MetaGPT 流水线输出已检测到
 )
