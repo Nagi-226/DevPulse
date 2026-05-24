@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default capability for DevPulse",
+  "windows": ["main"],
+  "permissions": ["core:default", "shell:allow-open"]
+}
