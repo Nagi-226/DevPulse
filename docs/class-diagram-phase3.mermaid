@@ -1,0 +1,175 @@
+classDiagram
+    class User {
+        +int id
+        +str email
+        +str password_hash
+        +str display_name
+        +bool push_enabled
+        +bool push_weekly_report
+        +bool push_important_project
+        +str fcm_token
+        +datetime created_at
+        +datetime updated_at
+    }
+
+    class Repository {
+        +int id
+        +str full_name
+        +str owner
+        +str name
+        +str description
+        +str language
+        +list topics
+        +int total_stars
+        +int stars_since
+        +int forks
+        +int forks_since
+        +int open_issues
+        +datetime created_at
+        +datetime updated_at
+        +str url
+        +bool has_readme
+        +str readme_content
+        +str readme_summary
+        +list key_points
+        +list tags
+        +datetime crawled_at
+        +datetime summarized_at
+        +int trending_rank
+        +str trending_since
+        +str source
+    }
+
+    class WeeklyReport {
+        +int id
+        +datetime week_start
+        +datetime week_end
+        +str language_filter
+        +str source_filter
+        +int total_repos
+        +list top_repos
+        +str overview_text
+        +datetime generated_at
+        +bool published
+        +datetime published_at
+    }
+
+    class Favorite {
+        +int id
+        +int user_id
+        +int repo_id
+        +datetime created_at
+    }
+
+    class StarHistory {
+        +int id
+        +int repo_id
+        +int total_stars
+        +datetime recorded_at
+    }
+
+    class AuthRequest {
+        +str email
+        +str password
+    }
+
+    class RegisterRequest {
+        +str email
+        +str password
+        +str confirm_password
+        +str display_name
+    }
+
+    class AuthResponse {
+        +str access_token
+        +str refresh_token
+        +str token_type
+        +int expires_in
+        +User user
+    }
+
+    class TokenPayload {
+        +int sub
+        +str email
+        +int exp
+        +int iat
+        +str type
+    }
+
+    class TrendingSource {
+        <<abstract>>
+        +str source_name
+        +fetch_trending(language, since, limit) list~TrendingRepo~
+        +fetch_repo_detail(owner, repo) dict
+    }
+
+    class GitHubSource {
+        +str source_name = "github"
+        +fetch_trending(language, since, limit) list~TrendingRepo~
+        +fetch_repo_detail(owner, repo) dict
+    }
+
+    class GitLabSource {
+        +str source_name = "gitlab"
+        +fetch_trending(language, since, limit) list~TrendingRepo~
+        +fetch_repo_detail(owner, repo) dict
+    }
+
+    class GiteeSource {
+        +str source_name = "gitee"
+        +fetch_trending(language, since, limit) list~TrendingRepo~
+        +fetch_repo_detail(owner, repo) dict
+    }
+
+    class AuthService {
+        +hash_password(password) str
+        +verify_password(plain, hashed) bool
+        +create_access_token(user_id, email) str
+        +create_refresh_token(user_id) str
+        +decode_token(token) TokenPayload
+    }
+
+    class FCMService {
+        +send_weekly_report_notification(report_id) int
+        +send_to_user(user_id, title, body) bool
+        +register_token(user_id, fcm_token) None
+    }
+
+    class TrendingRepo {
+        +str full_name
+        +str owner
+        +str name
+        +str description
+        +str language
+        +int total_stars
+        +int stars_since
+        +int forks
+        +str url
+    }
+
+    class HealthResponse {
+        +str status
+        +str version
+        +str db_status
+        +datetime last_weekly_report
+    }
+
+    class PushPreferences {
+        +bool enabled
+        +bool weekly_report
+        +bool important_project
+    }
+
+    User "1" --> "*" Favorite : has
+    Repository "1" --> "*" Favorite : referenced_by
+    Repository "1" --> "*" StarHistory : has_history
+    TrendingSource <|-- GitHubSource : implements
+    TrendingSource <|-- GitLabSource : implements
+    TrendingSource <|-- GiteeSource : implements
+    TrendingSource --> TrendingRepo : returns
+    AuthService --> TokenPayload : creates
+    AuthService --> User : manages
+    FCMService --> User : sends_to
+    AuthRequest --> AuthResponse : produces
+    RegisterRequest --> AuthResponse : produces
+    User --> PushPreferences : has

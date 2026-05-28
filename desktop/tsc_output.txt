@@ -1,0 +1,19 @@
+src/stores/useCollectionsStore.ts(51,13): error TS6133: 'result' is declared but its value is never read.
+src/utils/api-client.ts(155,11): error TS2322: Type '{ fromCache: boolean; }' is not assignable to type 'T & { fromCache?: boolean | undefined; }'.
+  Type '{ fromCache: boolean; }' is not assignable to type 'T'.
+    'T' could be instantiated with an arbitrary type which could be unrelated to '{ fromCache: boolean; }'.
+src/utils/api-client.ts(155,32): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(target: {}, source: { fromCache: boolean; }): { fromCache: boolean; }', gave the following error.
+    Argument of type 'T' is not assignable to parameter of type '{}'.
+  Overload 2 of 4, '(target: object, ...sources: any[]): any', gave the following error.
+    Argument of type 'T' is not assignable to parameter of type 'object'.
+src/utils/api-client.ts(162,13): error TS2322: Type '{ fromCache: boolean; }' is not assignable to type 'T & { fromCache?: boolean | undefined; }'.
+  Type '{ fromCache: boolean; }' is not assignable to type 'T'.
+    'T' could be instantiated with an arbitrary type which could be unrelated to '{ fromCache: boolean; }'.
+src/utils/api-client.ts(162,34): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(target: {}, source: { fromCache: boolean; }): { fromCache: boolean; }', gave the following error.
+    Argument of type 'T' is not assignable to parameter of type '{}'.
+  Overload 2 of 4, '(target: object, ...sources: any[]): any', gave the following error.
+    Argument of type 'T' is not assignable to parameter of type 'object'.
+src/utils/notifications.ts(21,7): error TS2307: Cannot find module '@tauri-apps/plugin-notification' or its corresponding type declarations.
+src/utils/notifications.ts(48,7): error TS2307: Cannot find module '@tauri-apps/plugin-notification' or its corresponding type declarations.

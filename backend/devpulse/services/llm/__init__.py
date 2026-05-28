@@ -2,6 +2,7 @@
 
 from devpulse.services.llm.anthropic_provider import AnthropicProvider
 from devpulse.services.llm.base import BaseLLMProvider, LLMResponse
+from devpulse.services.llm.deepseek_provider import DeepSeekProvider
 from devpulse.services.llm.ollama_provider import OllamaProvider
 from devpulse.services.llm.openai_provider import OpenAIProvider
 
@@ -10,5 +11,6 @@ __all__ = [
     "LLMResponse",
     "OpenAIProvider",
     "AnthropicProvider",
+    "DeepSeekProvider",
     "OllamaProvider",
 ]

@@ -1,0 +1,31 @@
+sequenceDiagram
+    participant Scheduler as APScheduler
+    participant Crawler as TrendingSource
+    participant LLM as DeepSeek API
+    participant DB as PostgreSQL
+    participant FCM as FCM Service
+    participant Device as Android Device
+
+    Note over Scheduler: 每周一 9:00 UTC+8 触发
+    Scheduler->>Crawler: fetch_trending(language="", since="weekly")
+    Crawler->>Crawler: GitHubSource.fetch_trending()
+    Crawler-->>Scheduler: 25 trending repos
+
+    loop 每个仓库
+        Scheduler->>DB: UPSERT INTO repositories
+        DB-->>Scheduler: repo_id
+        Scheduler->>LLM: POST /chat/completions<br/>{prompt: "生成中文摘要", repo: {...}}
+        LLM-->>Scheduler: {summary, key_points, tags}
+        Scheduler->>DB: UPDATE repositories SET readme_summary=?, ...
+    end
+
+    Scheduler->>DB: INSERT INTO weekly_reports
+    DB-->>Scheduler: report_id
+
+    Note over Scheduler,FCM: 推送通知
+    Scheduler->>FCM: send_weekly_report_notification(report_id)
+    FCM->>DB: SELECT fcm_token FROM users<br/>WHERE push_enabled=true AND push_weekly_report=true
+    DB-->>FCM: [token1, token2, ...]
+    FCM->>FCM: Firebase Admin SDK multicast
+    FCM->>Device: FCM Push (via Google servers)
+    Device->>Device: 通知栏弹出 "新周报已生成"

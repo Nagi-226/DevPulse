@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from typing import Any
 
+from devpulse.config import settings
 from devpulse.core.database import Database
 from devpulse.core.repository import RepositoryDAO, WeeklyReportDAO
 from devpulse.services.crawler import CrawlerService
@@ -64,13 +66,15 @@ class StorageService:
         language: str = "",
         since: str = "weekly",
         limit: int = 25,
-    ) -> list[dict]:
-        """爬取 Trending 并持久化存储.
+    ) -> dict[str, Any]:
+        """爬取 Trending 并持久化存储，完成后自动触发 LLM 摘要管线.
 
         流程：
         1. 调用 crawler.crawl_trending_repos 获取数据
         2. 调用 repository_dao.bulk_create_or_update 存储
-        3. 返回已存储的数据
+        3. 筛选 readme_summary IS NULL 的新项目
+        4. 自动调用 summarize_and_update 生成摘要
+        5. 返回存储与摘要统计
 
         Args:
             language: 语言过滤.
@@ -78,7 +82,7 @@ class StorageService:
             limit: 返回条数上限.
 
         Returns:
-            已存储的仓库数据字典列表.
+            { stored: int, summarized: int, items: list[dict] }
         """
         repos_data = await self._crawler.crawl_trending_repos(
             language=language, since=since, limit=limit
@@ -86,9 +90,10 @@ class StorageService:
 
         if not repos_data:
             logger.warning("No trending data fetched for language=%s since=%s", language, since)
-            return []
+            return {"stored": 0, "summarized": 0, "items": []}
 
         stored: list[dict] = []
+        stored_ids: list[int] = []
         async with self._db.get_session() as session:
             dao = RepositoryDAO(session)
             for i, data in enumerate(repos_data):
@@ -98,33 +103,61 @@ class StorageService:
                 # 转换日期字段
                 _normalize_datetime_fields(data)
                 repo = await dao.create_or_update(data)
+                stored_ids.append(repo.id)  # type: ignore[arg-type]
                 stored.append(
                     {
                         "id": repo.id,
                         "full_name": repo.full_name,
                         "total_stars": repo.total_stars,
                         "stars_since": repo.stars_since,
+                        "forks": repo.forks,
+                        "open_issues": repo.open_issues,
+                        "created_at": repo.created_at.isoformat() if repo.created_at else None,
+                        "updated_at": repo.updated_at.isoformat() if repo.updated_at else None,
                     }
                 )
 
         logger.info("Crawled and stored %d repos", len(stored))
-        return stored
+
+        # ── 链式触发 LLM 摘要：仅对尚未生成摘要的项目 ─────
+        summarized_count = 0
+        try:
+            summarized_count = await self.summarize_and_update(
+                repo_ids=stored_ids,
+                batch_size=settings.LLM_SUMMARY_BATCH_SIZE,
+                only_without_summary=True,
+            )
+            logger.info(
+                "Chain-triggered LLM summary: %d repos summarized after crawl",
+                summarized_count,
+            )
+        except Exception:
+            logger.exception("LLM summary chain failed after crawl (non-blocking)")
+
+        return {
+            "stored": len(stored),
+            "summarized": summarized_count,
+            "items": stored,
+        }
 
     async def summarize_and_update(
         self,
         repo_ids: list[int] | None = None,
         batch_size: int = 5,
+        only_without_summary: bool = True,
     ) -> int:
         """为指定仓库生成摘要并回写数据库.
 
         流程：
         1. 如果 repo_ids 为 None，则获取未摘要的项目
-        2. 分批调用 summarizer.summarize_batch
-        3. 调用 repository_dao.update_summary 更新摘要字段
+        2. 如果 only_without_summary=True，过滤掉已有摘要的项目
+        3. 按 batch_size 分批调用 summarizer.summarize_batch
+        4. 调用 repository_dao.update_summary 更新摘要字段
 
         Args:
             repo_ids: 目标仓库 ID 列表，None 表示自动获取未摘要项目.
             batch_size: 每批处理数量.
+            only_without_summary: 是否仅处理无摘要的项目（控制成本）.
 
         Returns:
             已生成摘要的仓库数量.
@@ -139,9 +172,10 @@ class StorageService:
 
                 from devpulse.core.models import Repository as RepoModel
 
-                result = await session.execute(
-                    select(RepoModel).where(RepoModel.id.in_(repo_ids))
-                )
+                stmt = select(RepoModel).where(RepoModel.id.in_(repo_ids))
+                if only_without_summary:
+                    stmt = stmt.where(RepoModel.readme_summary.is_(None))
+                result = await session.execute(stmt)
                 repos = list(result.scalars().all())
 
             if not repos:
@@ -166,19 +200,48 @@ class StorageService:
                 batch = repo_dicts[i : i + batch_size]
                 batch_repos = repos[i : i + batch_size]
 
-                summarized = await self._summarizer.summarize_batch(batch)
+                try:
+                    summarized = await self._summarizer.summarize_batch(batch)
+                except Exception:
+                    logger.exception(
+                        "LLM batch summarize failed for batch %d-%d",
+                        i, i + len(batch),
+                    )
+                    continue
 
                 for repo_obj, result in zip(batch_repos, summarized, strict=False):
-                    await dao.update_summary(
-                        repo_id=repo_obj.id,  # type: ignore[arg-type]
-                        summary=result.get("summary", ""),
-                        key_points=result.get("key_points", []),
-                        tags=result.get("tags", []),
-                    )
-                    total_summarized += 1
+                    try:
+                        await dao.update_summary(
+                            repo_id=repo_obj.id,  # type: ignore[arg-type]
+                            summary=result.get("summary", ""),
+                            key_points=result.get("key_points", []),
+                            tags=result.get("tags", []),
+                        )
+                        total_summarized += 1
+                    except Exception:
+                        logger.exception(
+                            "Failed to update summary for repo_id=%d",
+                            repo_obj.id,
+                        )
 
-        logger.info("Summarized %d repos", total_summarized)
+        logger.info("Summarized %d repos (batch_size=%d)", total_summarized, batch_size)
         return total_summarized
+
+    async def summarize_batch(
+        self,
+        repo_dicts: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """批量生成摘要（直接调用 Summarizer，不写数据库）.
+
+        Args:
+            repo_dicts: 仓库信息字典列表.
+
+        Returns:
+            带 summary/key_points/tags 的仓库字典列表.
+        """
+        if not repo_dicts:
+            return []
+        return await self._summarizer.summarize_batch(repo_dicts)
 
     async def generate_weekly_report(
         self,

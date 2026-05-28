@@ -56,7 +56,7 @@
 | **M5: Deviation Detection** | 检测项目轨迹偏离，分级（Minor/Major/Critical）处理 | 每次 PR 合入前对比 `contract-{phase}.md` |
 | **M6: Reliability Gate** | 发布前验证：回归安全 + 迭代健康 | 0.1.0 起每次发布前强制执行，不可跳过 |
 | **M7: L5 Defense Core** | 防御"随便"无限循环、技术名词堆砌、频繁方向变更 | 用户连续 3 次"随便"→ 强制锁定默认方案 |
-| **M8: Quality Gate** | 五维审计（架构/安全/性能/质量/测试），输出严重等级和量化对比 | 每次版本发布自动运行 `production-code-audit` |
+| **M8: Quality Gate** | 五维审计（架构/安全/性能/质量/测试），输出严重等级和量化对比 | 每次版本发布自动运行 `production-code-audit`。**强化门禁：** 必须加载 `.claude/skills/test-driven-development` 确保无测试代码已删除，加载 `.claude/skills/verification-before-completion` 确保所有断言均有新鲜验证证据 |
 | **M9: Scope Fidelity Gate** | 检测 Agent 过度工程（SF-L1 到 SF-L4 四级），15 条反过度工程速查 | 每次 PR diff 审查时自动运行必要性测试 |
 
 ---

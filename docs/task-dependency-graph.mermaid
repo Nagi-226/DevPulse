@@ -1,0 +1,19 @@
+graph TD
+    T01["T01: 基础设施 + Android真机 + 云部署<br/>0.2.1 + 0.2.2<br/>P0 | 15 files | 无依赖"]
+    T02["T02: 用户认证系统 + 跨端同步<br/>0.2.3<br/>P0 | 11 files | 依赖 T01"]
+    T03["T03: 多源扩展 + 移动推送<br/>0.2.4 + 0.2.5<br/>P1 | 15 files | 依赖 T02"]
+    T04["T04: 鸿蒙全链路<br/>0.2.6 + 0.2.7<br/>P1 | 15 files | 依赖 T01"]
+    T05["T05: QA + 商店准备 + 鸿蒙发布<br/>0.2.8 + 0.3.0<br/>P0 | 12 files | 依赖 T02,T03,T04"]
+
+    T01 --> T02
+    T01 --> T04
+    T02 --> T03
+    T02 --> T05
+    T03 --> T05
+    T04 --> T05
+
+    style T01 fill:#4CAF50,color:#fff
+    style T02 fill:#2196F3,color:#fff
+    style T03 fill:#FF9800,color:#fff
+    style T04 fill:#9C27B0,color:#fff
+    style T05 fill:#F44336,color:#fff

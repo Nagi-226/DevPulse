@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Repo } from "../types";
+import type { Repo, StarPoint } from "../types";
 import { api } from "../utils/api-client";
 
 interface RepoDetailState {
@@ -7,12 +7,23 @@ interface RepoDetailState {
   loading: boolean;
   error: string | null;
   useApi: boolean;
-  fetchRepo: (owner: string, repo: string) => Promise<void>;
+
+  /** 收藏状态 */
+  isFavorite: boolean;
+  /** Star 趋势数据 */
+  starHistory: StarPoint[];
+  starHistoryLoading: boolean;
+
+  fetchRepo: (owner: string, repoName: string) => Promise<void>;
+  /** 切换收藏状态 */
+  toggleFavorite: () => Promise<boolean>;
+  /** 获取 Star 历史趋势 */
+  fetchStarHistory: (owner: string, repoName: string) => Promise<void>;
   setUseApi: (useApi: boolean) => void;
 }
 
-/** 详情页 Mock 数据（从 useTrendingStore 复制） */
-const MOCK_REPOS = [
+/** 详情页 Mock 数据 */
+const MOCK_REPOS: Repo[] = [
   {
     id: 1,
     full_name: "microsoft/graphrag",
@@ -26,6 +37,9 @@ const MOCK_REPOS = [
     stars_since: 3200,
     forks: 2100,
     forks_since: 180,
+    open_issues: 42,
+    created_at: "2024-03-15T00:00:00Z",
+    updated_at: "2026-05-25T00:00:00Z",
     url: "https://github.com/microsoft/graphrag",
     trending_rank: 1,
     trending_since: "weekly",
@@ -51,6 +65,9 @@ const MOCK_REPOS = [
     stars_since: 5600,
     forks: 15200,
     forks_since: 420,
+    open_issues: 128,
+    created_at: "2023-02-24T00:00:00Z",
+    updated_at: "2026-05-27T00:00:00Z",
     url: "https://github.com/meta-llama/llama-models",
     trending_rank: 2,
     trending_since: "weekly",
@@ -65,11 +82,24 @@ const MOCK_REPOS = [
   },
 ];
 
+/** Mock Star 历史数据 */
+const MOCK_STAR_HISTORY: StarPoint[] = Array.from({ length: 30 }, (_, i) => {
+  const date = new Date();
+  date.setDate(date.getDate() - (29 - i));
+  return {
+    date: date.toISOString().slice(0, 10),
+    stars: 20000 + Math.floor(i * 150) + Math.floor(Math.random() * 200),
+  };
+});
+
 export const useRepoDetailStore = create<RepoDetailState>((set, get) => ({
   repo: null,
   loading: false,
   error: null,
   useApi: true,
+  isFavorite: false,
+  starHistory: [],
+  starHistoryLoading: false,
 
   fetchRepo: async (owner: string, repoName: string) => {
     const { useApi } = get();
@@ -78,12 +108,16 @@ export const useRepoDetailStore = create<RepoDetailState>((set, get) => ({
     try {
       if (useApi) {
         const response = await api.getRepo(owner, repoName);
-        set({ repo: response.data, loading: false });
+        const repo = response as unknown as Repo;
+        set({
+          repo,
+          loading: false,
+          isFavorite: repo.is_favorited ?? false,
+        });
       } else {
-        // Mock 降级
         await new Promise((resolve) => setTimeout(resolve, 500));
         const found = MOCK_REPOS.find(
-          (r) => r.owner === owner && r.name === repoName
+          (r) => r.owner === owner && r.name === repoName,
         );
         if (found) {
           set({ repo: found, loading: false });
@@ -92,10 +126,9 @@ export const useRepoDetailStore = create<RepoDetailState>((set, get) => ({
         }
       }
     } catch {
-      // API 失败时降级到 Mock
       if (useApi) {
         const found = MOCK_REPOS.find(
-          (r) => r.owner === owner && r.name === repoName
+          (r) => r.owner === owner && r.name === repoName,
         );
         if (found) {
           set({
@@ -112,6 +145,48 @@ export const useRepoDetailStore = create<RepoDetailState>((set, get) => ({
       } else {
         set({ error: "获取项目详情失败，请重试", loading: false });
       }
+    }
+  },
+
+  toggleFavorite: async () => {
+    const { repo, isFavorite } = get();
+    if (!repo) return false;
+
+    const fullName = repo.full_name;
+    try {
+      if (isFavorite) {
+        await api.unstarRepo(fullName);
+        set({ isFavorite: false });
+      } else {
+        await api.starRepo(fullName);
+        set({ isFavorite: true });
+      }
+      return true;
+    } catch {
+      set({ error: isFavorite ? "取消收藏失败" : "收藏失败" });
+      return false;
+    }
+  },
+
+  fetchStarHistory: async (owner: string, repoName: string) => {
+    const { useApi } = get();
+    set({ starHistoryLoading: true });
+
+    try {
+      if (useApi) {
+        const response = await api.getStarHistory(`${owner}/${repoName}`);
+        const items = (response as unknown as { items: { history: StarPoint[] }[] }).items;
+        if (items && items.length > 0) {
+          set({ starHistory: items[0].history ?? [], starHistoryLoading: false });
+        } else {
+          set({ starHistory: [], starHistoryLoading: false });
+        }
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        set({ starHistory: MOCK_STAR_HISTORY, starHistoryLoading: false });
+      }
+    } catch {
+      set({ starHistory: [], starHistoryLoading: false });
     }
   },
 

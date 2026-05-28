@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant Client as React SPA
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant Auth as AuthService
+
+    Note over Client,Auth: === 用户注册 ===
+    Client->>API: POST /api/v1/auth/register<br/>{email, password, confirm_password}
+    API->>Auth: 校验邮箱格式 + 密码强度（≥8位 + 字母+数字）
+    API->>DB: SELECT id FROM users WHERE email=?
+    DB-->>API: 不存在（OK）
+    API->>Auth: hash_password(plain_password)
+    Auth-->>API: bcrypt_hash
+    API->>DB: INSERT INTO users (email, password_hash, ...)
+    DB-->>API: user_id
+    API->>Auth: create_access_token(user_id, email) + create_refresh_token(user_id)
+    Auth-->>API: access_token (24h) + refresh_token (7d)
+    API-->>Client: {access_token, refresh_token, user}
+
+    Note over Client,Auth: === 用户登录 ===
+    Client->>API: POST /api/v1/auth/login<br/>{email, password}
+    API->>DB: SELECT * FROM users WHERE email=?
+    DB-->>API: user record
+    API->>Auth: verify_password(plain, hashed)
+    Auth-->>API: True
+    API->>Auth: create_access_token + create_refresh_token
+    API-->>Client: {access_token, refresh_token, user}
+
+    Note over Client,Auth: === 跨设备收藏同步 ===
+    Note over Client: 设备A: 已登录，收藏项目
+    Client->>API: POST /repos/{owner}/{repo}/star<br/>Authorization: Bearer token
+    API->>API: decode_token → user_id
+    API->>DB: INSERT INTO favorites (user_id, repo_id)
+    DB-->>API: OK
+    API-->>Client: {message: "Starred successfully"}
+
+    Note over Client: 设备B: 登录同一账号
+    Client->>API: GET /repos/collections<br/>Authorization: Bearer token
+    API->>API: decode_token → user_id
+    API->>DB: SELECT * FROM favorites JOIN repositories<br/>WHERE user_id=?
+    DB-->>API: favorites list
+    API-->>Client: {items: [...same as device A...]}

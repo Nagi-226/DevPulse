@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant Mobile as Android (4G)
+    participant DNS as DNS
+    participant Render as Render.com
+    participant Docker as Docker Container
+    participant PG as Supabase PostgreSQL
+
+    Mobile->>DNS: api.devpulse.app
+    DNS-->>Mobile: Render IP (SSL cert auto)
+    Mobile->>Render: GET /api/v1/health
+    Render->>Docker: Reverse proxy → :8000
+    Docker->>PG: SELECT 1 (connection check)
+    PG-->>Docker: OK
+    Docker-->>Render: {status: "ok", db_status: "connected"}
+    Render-->>Mobile: 200 OK (SSL encrypted)
+
+    Mobile->>Render: GET /api/v1/trending?source=github&since=weekly
+    Render->>Docker: Proxy request
+    Docker->>PG: SELECT * FROM repositories<br/>WHERE trending_since='weekly'<br/>ORDER BY trending_rank LIMIT 25
+    PG-->>Docker: 25 rows
+    Docker-->>Render: JSON response
+    Render-->>Mobile: {items: [...], total: 25}

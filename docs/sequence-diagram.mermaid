@@ -1,0 +1,51 @@
+sequenceDiagram
+    participant Client as 前端/定时器
+    participant API as FastAPI /repos/crawl
+    participant BG as BackgroundTasks
+    participant Crawler as CrawlerService
+    participant Scraper as TrendingScraper
+    participant GitHub as GitHubClient
+    participant Storage as StorageService
+    participant Summarizer as Summarizer
+    participant DB as SQLite
+
+    Client->>API: POST /repos/crawl?language=&since=weekly
+    API->>BG: add_task(_crawl)
+    API-->>Client: {"message": "Crawl task started"}
+
+    Note over BG,DB: === 后台异步执行 ===
+
+    BG->>Crawler: crawl_trending_repos(language, since, limit=25)
+    
+    Crawler->>Scraper: scrape_trending(language, since)
+    Scraper-->>Crawler: trending_list (25 items, 含 stars_since)
+
+    loop 每个 trending item (并发5)
+        Crawler->>GitHub: fetch_repo(owner, repo)
+        GitHub-->>Crawler: {total_stars, forks, topics, open_issues, created_at, updated_at}
+        Crawler->>Crawler: _fetch_and_merge: 合并页面+API数据
+    end
+
+    Crawler-->>BG: merged repos list
+
+    BG->>Storage: crawl_and_store_trending(language, since, limit)
+    
+    loop 每个 repo
+        Storage->>DB: create_or_update(repo_data)
+        DB-->>Storage: Repository obj
+    end
+
+    Note over Storage: 存储完成后自动触发 LLM 摘要
+
+    Storage->>DB: get_repos_without_summary(limit=25)
+    DB-->>Storage: needs_summary list
+
+    loop 每批5个
+        Storage->>Summarizer: summarize_batch(batch_repos)
+        Summarizer->>Summarizer: LLM API 调用 (DeepSeek/GPT/Claude)
+        Summarizer-->>Storage: [{summary, key_points, tags}]
+        Storage->>DB: update_summary(repo_id, summary, key_points, tags)
+    end
+
+    Storage-->>BG: "摘要完成: N 个"
+    BG->>BG: logger.info("Background crawl+summarize completed")

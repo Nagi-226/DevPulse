@@ -152,3 +152,49 @@ npm install
 npx cap sync
 npx cap open android
 ```
+
+---
+
+## 7. Skills 集成
+
+本项目集成了 superpowers 核心技能集（位于 `.claude/skills/`），Marvis 在调度和执行任务时必须遵循以下规范：
+
+### 7.1 test-driven-development — TDD 开发规范
+
+| 规则 | 说明 |
+|------|------|
+| 铁律 | 无失败测试不得写生产代码 |
+| 适用范围 | 所有新功能开发、Bug 修复、重构 |
+| Marvis 职责 | 在派发编码任务前确认 Sub Agent 理解 TDD 铁律；验收时检查测试是否先于代码编写 |
+
+### 7.2 verification-before-completion — 强制验证
+
+| 规则 | 说明 |
+|------|------|
+| 铁律 | 无新鲜验证证据不得声称完成 |
+| 适用范围 | 提交前、PR 创建前、声称"完成"前 |
+| Marvis 职责 | 每次收到 Sub Agent 的"完成"报告时，必须运行对应的验证命令（pytest / ruff / tsc / build），确认输出后才能真正认可 |
+
+### 7.3 subagent-driven-development — 多 Agent 流水线
+
+| 规则 | 说明 |
+|------|------|
+| 核心模式 | 每任务独立子 Agent + 两阶段审查（规范合规 → 代码质量） |
+| 适用范围 | MetaGPT 多 Agent 并行任务、跨模块批量开发 |
+| Marvis 职责 | 拆分任务后按流程派发 implementer → spec-reviewer → code-quality-reviewer，不允许跳过审查环节 |
+
+### 7.4 systematic-debugging — 根因分析
+
+| 规则 | 说明 |
+|------|------|
+| 铁律 | 无根因调查不提修复方案 |
+| 适用范围 | 任何 bug、测试失败、异常行为 |
+| Marvis 职责 | 遇到失败时先执行 Phase 1（根因调查），不得直接尝试修复；3 次修复仍失败则质疑架构方案 |
+
+### 7.5 writing-plans — 实施计划编写
+
+| 规则 | 说明 |
+|------|------|
+| 核心原则 | 零上下文假设（Zero Context Assumptions） |
+| 适用范围 | 每个新 Phase 启动前、重大功能开发前 |
+| Marvis 职责 | 生成包含上下文评估、架构引用、验收标准、分步任务的完整计划文档，派发前经 plan-reviewer 审查 |

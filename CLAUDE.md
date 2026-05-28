@@ -64,3 +64,21 @@ DevPulse/
 - Leverage Claude Code's deep reasoning for architectural decisions and trade-off analysis
 - For multi-step tasks, break them down and let Claude Code plan the implementation order
 - Use `/clear` to reset context when switching between major tasks
+
+## Skills Integration
+
+本项目集成了以下 superpowers 技能（位于 `.claude/skills/`）：
+
+| Skill | 触发条件 | 用途 |
+|-------|---------|------|
+| test-driven-development | 所有新功能和 Bug 修复 | TDD 开发规范 |
+| verification-before-completion | 提交前、声称完成前 | 强制验证 |
+| subagent-driven-development | 多 Agent 并行任务 | MetaGPT 流水线 |
+| systematic-debugging | 任何 bug/测试失败 | 根因分析 |
+| writing-plans | 新 Phase 启动前 | 实施计划编写 |
+
+核心纪律:
+- NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+- NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+- 所有代码变更先 pytest + ruff + tsc + build 验证
+- 遇到 bug 先完成 Phase 1 根因调查再修复

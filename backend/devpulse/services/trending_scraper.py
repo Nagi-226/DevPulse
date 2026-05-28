@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from playwright.async_api import Browser, async_playwright
+
+if TYPE_CHECKING:
+    from devpulse.services.github_client import GitHubClient
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +18,14 @@ class TrendingScraper:
 
     Args:
         headless: 是否无头模式运行浏览器.
+        github_client: 可选的 GitHubClient，用于补全 API 数据.
     """
 
     BASE_URL = "https://github.com/trending"
 
-    def __init__(self, headless: bool = True) -> None:
+    def __init__(self, headless: bool = True, github_client: "GitHubClient | None" = None) -> None:
         self._headless = headless
+        self._github_client = github_client
         self._playwright = None
         self._browser: Browser | None = None
 
@@ -42,7 +47,7 @@ class TrendingScraper:
 
         Returns:
             仓库信息列表，每项包含 rank/owner/repo_name/url/description/language/
-            total_stars/stars_since/forks_since.
+            total_stars/stars_since/forks/forks_since/open_issues/created_at/updated_at.
         """
         url = self.BASE_URL
         if language:
@@ -79,8 +84,13 @@ class TrendingScraper:
         return repos
 
     async def _parse_single_repo(self, article, rank: int) -> dict[str, Any]:  # type: ignore[no-untyped-def]
-        """解析单个 .Box-row 元素."""
-        # owner/repo_name
+        """解析单个 .Box-row 元素，提取完整仓库信息.
+
+        先通过 DOM 解析获取基础字段，再通过 GitHub REST API 补全
+        total_stars / forks / open_issues / created_at / updated_at。
+        API 调用失败时保留 DOM 解析结果作为 fallback，不中断整体爬取。
+        """
+        # ── DOM 解析 ──────────────────────────────────────
         h2 = await article.query_selector("h2 a")
         href = await h2.get_attribute("href") if h2 else ""
         full_name = href.strip("/") if href else ""
@@ -88,37 +98,47 @@ class TrendingScraper:
         owner = parts[0] if len(parts) >= 1 else ""
         repo_name = parts[1] if len(parts) >= 2 else ""
 
-        # description
         desc_el = await article.query_selector("p")
         description = (await desc_el.inner_text()).strip() if desc_el else ""
 
-        # language
         lang_el = await article.query_selector('[itemprop="programmingLanguage"]')
         language = (await lang_el.inner_text()).strip() if lang_el else ""
 
-        # stars / forks
         total_stars = 0
         stars_since = 0
         forks_since = 0
 
-        # 统计行通常位于 flex 容器中
+        # 统计行：stars_since / forks_since
         stat_spans = await article.query_selector_all("span.d-inline-block")
         for span in stat_spans:
             text = (await span.inner_text()).strip()
-            # 例如 " 42,123 stars this week"
-            if "star" in text:
+            if "star" in text.lower():
                 stars_since = self._parse_number(text)
-            elif "fork" in text:
+            elif "fork" in text.lower():
                 forks_since = self._parse_number(text)
 
-        # 尝试从链接的 aria-label 或标题属性获取总 star 数
+        # 尝试多种方式获取总 Star 数
+        # 方式 1: stargazers 链接的 aria-label
         star_link = await article.query_selector("a[href$='/stargazers']")
         if star_link:
             aria = await star_link.get_attribute("aria-label")
             if aria:
                 total_stars = self._parse_number(aria)
 
-        return {
+        # 方式 2: svg 旁边最近的文本节点（部分 Trending 页面格式）
+        if total_stars == 0:
+            star_svg_parent = await article.query_selector(
+                "svg.octicon-star"
+            )
+            if star_svg_parent:
+                parent = await star_svg_parent.evaluate(
+                    "el => el.closest('a')?.innerText || ''"
+                )
+                if parent:
+                    total_stars = self._parse_number(parent)
+
+        # 构造基础结果
+        result = {
             "rank": rank,
             "owner": owner,
             "repo_name": repo_name,
@@ -127,8 +147,33 @@ class TrendingScraper:
             "language": language,
             "total_stars": total_stars,
             "stars_since": stars_since,
+            "forks": 0,
             "forks_since": forks_since,
+            "open_issues": 0,
+            "created_at": None,
+            "updated_at": None,
         }
+
+        # ── GitHub API 补全（可选，不阻塞主流程）──────────
+        if self._github_client and owner and repo_name:
+            try:
+                api_data = await self._github_client.fetch_repo(owner, repo_name)
+                # 使用 API 返回值覆盖 DOM 解析结果
+                result["total_stars"] = api_data.get("total_stars", result["total_stars"])
+                result["forks"] = api_data.get("forks", 0)
+                result["open_issues"] = api_data.get("open_issues", 0)
+                result["created_at"] = api_data.get("created_at")
+                result["updated_at"] = api_data.get("updated_at")
+                # 如果 API 返回了更准确的语言，也使用 API 的值
+                if api_data.get("language"):
+                    result["language"] = api_data["language"]
+            except Exception:
+                logger.debug(
+                    "GitHub API fallback failed for %s/%s, using DOM data",
+                    owner, repo_name,
+                )
+
+        return result
 
     async def scrape_repo_readme(self, owner: str, repo: str) -> str:
         """爬取仓库页面 README 内容（绕过 API 限制）.

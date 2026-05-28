@@ -34,6 +34,14 @@ def create_llm_provider(provider_name: str | None = None) -> BaseLLMProvider:
             api_key=settings.ANTHROPIC_API_KEY,
             model=settings.ANTHROPIC_MODEL,
         )
+    elif name == "deepseek":
+        from devpulse.services.llm.deepseek_provider import DeepSeekProvider
+
+        return DeepSeekProvider(
+            api_key=settings.DEEPSEEK_API_KEY,
+            model=settings.DEEPSEEK_MODEL,
+            base_url=settings.DEEPSEEK_BASE_URL,
+        )
     elif name == "ollama":
         from devpulse.services.llm.ollama_provider import OllamaProvider
 

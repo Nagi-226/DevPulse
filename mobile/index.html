@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>DevPulse</title>
+  <link rel="stylesheet" href="../desktop/dist/assets/index-CssHash.css" />
+  <style>
+    /* 移动端安全区域适配 */
+    :root {
+      --safe-area-top: env(safe-area-inset-top, 0px);
+      --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    body {
+      margin: 0;
+      padding-top: var(--safe-area-top);
+      padding-bottom: var(--safe-area-bottom);
+      background: #0f172a;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    #root {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+  </style>
+  <!-- 
+    移动端 Capacitor 入口 HTML。
+    实际部署时，由 build-android.bat 脚本将 Vite 构建的 dist/index.html
+    中的 <script> 和 <link> 标签同步到此文件。
+    
+    当前引用：
+    - CSS: ../desktop/dist/assets/index-*.css
+    - JS:  ../desktop/dist/assets/index-*.js
+  -->
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="../desktop/dist/assets/index-JsHash.js"></script>
+</body>
+</html>

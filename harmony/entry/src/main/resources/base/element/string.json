@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "DevPulse — AI 潮汐，GitHub Trending 开源项目周报"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "DevPulse 主入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "AI 潮汐"
+    },
+    {
+      "name": "internet_permission_reason",
+      "value": "需要网络连接以获取 Trending 数据和同步收藏"
+    },
+    {
+      "name": "notification_permission_reason",
+      "value": "需要通知权限以便在周报生成时推送提醒"
+    },
+    {
+      "name": "wifi_permission_reason",
+      "value": "用于检测网络连接状态"
+    }
+  ]
+}

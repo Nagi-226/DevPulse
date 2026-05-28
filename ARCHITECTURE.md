@@ -386,26 +386,161 @@ GitHub Trending 页面 → Playwright 抓取 → 数据清洗
 | **0.0.7** | API 层 + 前后端联通 | FastAPI RESTful + api-client.ts | 全量 API 端点 + 前端数据请求 + 响应渲染 | 前端列表数据来自真实 API |
 | **0.0.8** | MetaGPT 管道集成 | MetaGPT Role/Action/SOP | 爬虫Agent → 分析Agent → 摘要Agent → 发布Agent | 一键触发完整周报生成流水线 |
 | **0.0.9** | 桌面可执行测试文件 | Python + Node.js + Tauri CLI | dev.bat / build_exe.bat / verify.bat + .exe 产出 | 三种启动方式全部可用 |
-| **0.1.0** | Tauri 桌面 MVP 发布 | Tauri 2.x + TDD + M6/M8 | 桌面安装包 + 测试覆盖率报告 + 门禁审计报告 | M6 Reliability Gate 全通 + M8 Quality Gate 全通 + 核心测试覆盖 ≥ 80% | ✅ 已完成 |
+| **0.1.0** | Tauri 桌面 MVP 发布 | Tauri 2.x + NSIS/MSI | 桌面安装包 + 后端自动拉起 + 日志诊断 | 桌面双击启动 → 后端 5s 就绪 → 真实 Trending 数据展示 |
 
 ---
 
-## Phase 1 完成状态
+## Phase 1 完成状态（截止 2026-05-27）
 
-**Phase 1 (0.0.1 → 0.1.0) 全部版本已完成。**
+**Phase 1 (0.0.1 → 0.1.0) 核心链路已完成，桌面安装包可用。已知缺口见下方。**
 
-| 版本 | 完成日期 | 状态 |
-|------|---------|------|
-| 0.0.1 | — | ✅ 项目脚手架 |
-| 0.0.2 | — | ✅ GitHub 爬虫模块 |
-| 0.0.3 | — | ✅ LLM 摘要管线 |
-| 0.0.4 | — | ✅ 元数据存储 |
-| 0.0.5 | — | ✅ CLI 工具 + 定时调度 |
-| 0.0.6 | — | ✅ React 前端骨架 |
-| 0.0.7 | — | ✅ API 层 + 前后端联通 |
-| 0.0.8 | — | ✅ MetaGPT 管道集成 |
-| 0.0.9 | — | ✅ 桌面可执行测试文件 |
-| 0.1.0 | 2026-05-24 | ✅ Tauri 桌面 MVP 发布 |
+| 版本 | 完成日期 | 状态 | 备注 |
+|------|---------|:----:|------|
+| 0.0.1 | — | ✅ | 项目脚手架，三端依赖锁定 |
+| 0.0.2 | — | ✅ | GitHub Trending 爬虫（Playwright） |
+| 0.0.3 | — | ✅ | LLM 摘要管线，4 厂商适配器 |
+| 0.0.4 | — | ✅ | SQLite 存储 + SQLAlchemy CRUD |
+| 0.0.5 | — | ✅ | CLI + APScheduler 定时调度 |
+| 0.0.6 | — | ✅ | React 前端骨架（Tauri + Vite） |
+| 0.0.7 | — | ✅ | FastAPI 9 端点 + 前端数据联通 |
+| 0.0.8 | — | ✅ | MetaGPT 4 Agent 流水线定义 |
+| 0.0.9 | — | ✅ | dev.bat / build_exe.bat / verify.bat |
+| 0.1.0 | 2026-05-24 | ✅ | Tauri 2.x NSIS/MSI 安装包 |
+
+### Phase 1 已知缺口
+
+| 缺口 | 影响 | 计划修复 |
+|------|------|---------|
+| `total_stars` 全为 0（爬虫仅抓 `stars_since`） | Trending 卡片无 Star 数 | 0.1.2 |
+| `summary/key_points/tags` 全为 null | LLM 摘要管线未运行 | 0.1.3 |
+| 无系统托盘驻留 | 关闭窗口即退出 | 0.1.4 |
+| 无搜索/收藏 API 和 UI | README Feature 缺失 | 0.1.5-0.1.6 |
+| 无推送通知 | README Feature 缺失 | 0.1.10 |
+| 无趋势图表（Recharts 已安装未用） | README Feature 缺失 | 0.1.8 |
+| M6/M8 门禁未执行 | 无 QA 报告 | 0.1.10 |
+
+---
+
+## Phase 2 迭代路线图（0.1.1 → 0.2.0）
+
+共 10 个小版本，每版聚焦一个模块，逐步补齐功能并完成 Android 适配。
+
+### 迭代总览
+
+```
+0.1.0 (基线) ──→ 0.1.5 (桌面完善) ──→ 0.1.10 (门禁全通) ──→ 0.2.0 (Android 发布)
+                     │                              │
+                     ├── BugFix + 数据修复          ├── 离线缓存
+                     ├── LLM 摘要激活              ├── 趋势图表
+                     ├── 系统托盘驻留              ├── 推送通知
+                     └── 搜索 + 收藏               └── M6/M8 门禁
+```
+
+### 详细迭代计划
+
+| 版本 | 主题 | 目标 | 前端变更 | 后端变更 | 验收标准 |
+|------|------|------|---------|---------|---------|
+| **0.1.1** 🔧 | BugFix 扫尾 | 修复桌面应用已知缺陷 | api-client 重试逻辑增强 | 版本号同步 0.1.0；CORS 完整；后端子进程隐藏控制台 | 双击 NSIS 安装 → 无命令行窗口 → 5s 内展示真实数据 |
+| **0.1.2** 📊 | 数据质量修复 | 补齐 `total_stars` 和 `forks` | 卡片组件显示完整 Stars/Forks | 爬虫新增 GitHub API 补全详情；`repo_detail` 抓取仓库页 | Trending 卡片展示 3 项指标：Stars Since / Total Stars / Forks |
+| **0.1.3** 🤖 | LLM 摘要激活 | 触发 AI 摘要管线 | 详情页渲染 `summary/key_points/tags` | `/repos/crawl` 后链路自动调用 LLM；摘要存储写入 DB | 每个 Trending 项目展示中文摘要 + 3 个关键点 + 标签 |
+| **0.1.4** 🖥️ | 桌面驻留 | 系统托盘 + 关闭到托盘 | 托盘菜单：显示/退出/立即刷新 | Tauri `tray` 插件配置；最小化到托盘逻辑 | 点 X 不退出 → 托盘图标驻留 → 右键菜单可用 |
+| **0.1.5** 🔍 | 搜索功能 | 按名称/语言/标签搜索 | SearchBar 组件 + SearchResult 列表页 | `/repos/?q=xxx&language=xxx` 全文搜索端点 | 输入关键词 → 即时过滤 → 点击进入详情 |
+| **0.1.6** ⭐ | 收藏管理 | 收藏项目 + 收藏列表 | 详情页收藏按钮 + CollectionPage | `POST/DELETE /repos/star` + `GET /collections` 端点 | 点击收藏 → 二次确认取消 → 收藏页面查看列表 |
+| **0.1.7** 📱 | Capacitor 基础 | Android 桥接适配 | `mobile/` 目录初始化；`capacitor.config.ts` 联网配置 | API base URL 环境变量注入；CORS 移动端适配 | `npx cap sync android` 成功；Android Studio 构建预览 |
+| **0.1.8** 📈 | 趋势图表 | Recharts 图表集成 | 项目详情页 Star 增长曲线；首页语言分布饼图 | `/repos/trends?period=30d` 趋势数据端点 | 详情页看到 30 天 Star 折线图；首页看到语言占比饼图 |
+| **0.1.9** 📴 | 离线缓存 | SQLite 本地缓存 + 断网降级 | 离线 Banner 提示；缓存数据优先渲染 | 前端 IndexedDB / SQLite 缓存层；ETag 条件请求 | 断网后打开 App → 展示上次缓存数据 + "离线模式" 标签 |
+| **0.1.10** 🔔 | 推送通知 + 门禁 | 系统通知 + M6/M8 QA | 通知偏好设置页面 | Windows Toast 通知；APScheduler 周报发布触发 | 新周报生成 → 桌面通知弹窗；M6/M8 门禁报告通过 |
+| **0.2.0** 🚀 | Android MVP 发布 | Android APK 正式构建 | 移动端 UI 自适应；触控优化 | API 生产部署（可选）；APK 签名打包 | `npx cap open android` → Gradle 构建 → 真机运行 |
+
+### 迭代依赖关系
+
+```
+0.1.1 (BugFix) ──────┬──→ 0.1.2 (数据修复) ──→ 0.1.3 (LLM摘要)
+                      │
+                      ├──→ 0.1.4 (系统托盘) ──→ 0.1.10 (推送通知)
+                      │
+                      ├──→ 0.1.5 (搜索) ──→ 0.1.6 (收藏)
+                      │
+                      ├──→ 0.1.7 (Capacitor基础)
+                      │         │
+                      ├──→ 0.1.8 (趋势图表)
+                      │
+                      └──→ 0.1.9 (离线缓存)
+                                 │
+0.1.10 (门禁全通) ←──────────────┘
+        │
+0.2.0 (Android 发布) ←─── 0.1.7 (Capacitor基础)
+```
+
+> **说明**：0.1.2-0.1.9 可并行开发（前后端分离、无强依赖），0.1.10 为质量门禁汇总关卡，0.2.0 依赖 0.1.7 的 Capacitor 基础和 0.1.10 的门禁通过。
+
+---
+
+## Phase 3 迭代路线图（0.2.1 → 0.3.0）
+
+共 8 个小版本。Phase 3 的核心目标是**从桌面/Android MVP 演进为跨三端（Win+Android+鸿蒙）的完整产品**，同时补齐云端基础设施（后端部署、用户系统、多端同步）。
+
+### 迭代总览
+
+```
+0.2.0 (基线) ──→ 0.2.3 (云端用户) ──→ 0.2.6 (鸿蒙入门) ──→ 0.3.0 (鸿蒙发布)
+      │                │                    │
+      ├── 真机验证      ├── 后端云部署       ├── 鸿蒙 WebView 容器
+      ├── Android修复   ├── 用户+收藏同步    ├── 鸿蒙原生通知
+      └── Play Store    └── 多源+多主题      └── AppGallery 上架
+```
+
+### 详细迭代计划
+
+| 版本 | 主题 | 目标 | 关键变更 | 验收标准 |
+|------|------|------|---------|---------|
+| **0.2.1** 📱 | Android 真机验证 | 在真实 Android 设备上跑通 APK，修复移动端 Bug | Gradle 构建参数调优；移动端 UI 触控适配（最小触摸区域 48px）；`webDir` 路径修正；`capacitor://localhost` CORS 验证 | `npx cap open android` → USB 真机运行 → 首页数据正常加载 |
+| **0.2.2** ☁️ | 后端云部署 | 将 FastAPI 后端部署到云，移动端不再依赖本地 PC | Dockerfile + docker-compose.yml；SQLite → PostgreSQL 迁移脚本；环境变量注入 API_BASE_URL；健康检查 + 自动重启 | `curl https://api.devpulse.app/health` 返回 200；Android 真机切 Wi-Fi 正常访问 |
+| **0.2.3** 👤 | 用户系统 + 跨端同步 | 登录/注册 + 收藏跨设备同步 | `users` 表 + JWT 认证；`/auth/register`、`/auth/login` 端点；`favorites` 关联 `user_id`；Web 端 AuthPage（登录/注册表单）；Token 持久化（localStorage） | 两个设备登录同一账号 → 收藏自动同步 |
+| **0.2.4** 🌐 | 多源扩展 | 支持更多编程语言 + 接入 GitLab/Gitee 数据源 | 爬虫 `language` 参数覆盖 Top 20 语言；`TrendingSource` 抽象基类 → `GitHubSource` / `GitLabSource` / `GiteeSource`；前端语言筛选器扩展；数据源切换 Tab | Trending 页可切换 GitHub/GitLab/Gitee；语言筛选 20+ 选项 |
+| **0.2.5** 🔔 | 移动端推送 | Android 原生推送通知 | Firebase Cloud Messaging (FCM) 集成；Capacitor `@capacitor/push-notifications` 插件；后端周报生成 → FCM 广播；推送偏好云同步到 `users` 表 | 新周报生成 → Android 通知栏弹出 → 点击打开详情 |
+| **0.2.6** 🏗️ | 鸿蒙入门 | HarmonyOS 开发环境搭建 + WebView 容器 | DevEco Studio 项目初始化；`harmony/` 目录结构（entry + webview）；ArkUI Web 组件加载 `dist/`；`module.json5` 权限声明；基础路由适配 | DevEco Studio 模拟器 → 首页展示 Trending 列表 |
+| **0.2.7** 🎨 | 鸿蒙 UI 适配 | 鸿蒙原生风格 + 通知 + 离线 | 鸿蒙 `@ohos.notification` 推送；ArkUI 原生标题栏 + 返回手势；`safe-area` 刘海屏适配；鸿蒙本地存储 `@ohos.data.preferences` 替代 IndexedDB | 鸿蒙真机 UI 与系统风格一致；通知可点击跳转 |
+| **0.2.8** 🧪 | 鸿蒙 QA + 商店准备 | 三端全量回归测试 + AppGallery 上架材料 | 全端回归测试矩阵（Win/Android/鸿蒙）；AppGallery 上架截图 + 描述文案；隐私政策页面；性能基线（首屏 <2s）；无障碍适配 | 三端测试通过率 >95%；AppGallery 审核材料齐全 |
+| **0.3.0** 🚀 | 鸿蒙正式发布 | HarmonyOS AppGallery 上架 | HAP/HSP 签名打包；AppGallery Connect 上传；商店审核通过 | AppGallery 搜索结果可见 DevPulse「AI 潮汐」 |
+
+### 迭代依赖关系
+
+```
+0.2.1 (Android真机) ──┬──→ 0.2.2 (云部署) ──→ 0.2.3 (用户系统)
+                       │                          │
+                       │                          ├──→ 0.2.4 (多源扩展)
+                       │                          │
+                       ├──→ 0.2.5 (移动推送) ←────┘ (依赖云+用户)
+                       │
+                       ├──→ 0.2.6 (鸿蒙入门)
+                       │         │
+                       │         └──→ 0.2.7 (鸿蒙UI) ──→ 0.2.8 (QA) ──→ 0.3.0 (发布)
+                       │
+                       └── 0.2.3/0.2.4/0.2.5 与 0.2.6/0.2.7 可并行推进
+```
+
+> **关键依赖**：0.2.2（云部署）是移动端可用性的前提——当前 Android 依赖本地 PC 后端，不部署到云就无法独立使用。0.2.6（鸿蒙）依赖 0.2.5 的 Capacitor 插件模式作为参考，但两者可并行。
+
+### 技术选型新增
+
+| 领域 | 技术 | 理由 |
+|------|------|------|
+| 云部署 | Docker + Render/Railway | 低成本免费额度、自动 SSL、Git 集成部署 |
+| 数据库升级 | PostgreSQL (Supabase/Neon) | 免费 tier 500MB，支持 JWT Row-Level Security |
+| 用户认证 | JWT (PyJWT) + bcrypt | 轻量、无状态、无需 OAuth 三方依赖 |
+| 移动推送 | Firebase Cloud Messaging | Android 原生支持、Capacitor 插件成熟 |
+| 鸿蒙框架 | ArkUI + Web 组件 | 鸿蒙 NEXT 官方推荐，WebView 复用现有前端 |
+| 鸿蒙本地存储 | @ohos.data.preferences | 鸿蒙原生 KV 存储，替代 IndexedDB |
+
+### 与 Phase 4（运营增强）的边界
+
+Phase 3 的终点是**三端发布**，以下功能留给 Phase 4（0.3.1→1.0.0）：
+- 社区功能（评论、点赞、分享）
+- AI 个性化推荐（基于收藏历史的协同过滤）
+- 付费订阅（Pro 版高级分析）
+- 管理后台（数据看板、用户管理）
+- iOS 适配
 
 ---
 
@@ -511,6 +646,17 @@ npm run tauri build
 | Phase 2: 移动端 | 0.1.1 → 0.2.0 | Android APK 发布 | Capacitor 打包版本 |
 | Phase 3: 鸿蒙 | 0.2.1 → 0.3.0 | 鸿蒙适配 | 鸿蒙应用包 |
 | Phase 4: 运营增强 | 0.3.1 → 1.0.0 | 定时更新、推送通知、用户反馈、多主题订阅 | 完整产品 |
+
+---
+
+### 0.1.1 (BugFix) 变更摘要（2026-05-25~27）
+
+- **后端启动修复**：`lib.rs` `start_backend()` 重写，添加 TCP 端口就绪检测（15s 超时）+ `CREATE_NO_WINDOW` 子进程无控制台窗口
+- **CORS 扩展**：`config.py` 新增 `https://tauri.localhost` / `http://tauri.localhost` / `http://127.0.0.1:1420`
+- **前端重试**：`api-client.ts` 5 次重试机制（1s 间隔），应对后端冷启动延迟
+- **cmd fallback 修复**：移除双 `/c` 参数，正确拆分 `cmd.exe` 参数
+- **版本同步**：`__version__` 0.0.4 → 0.1.0
+- **NSIS 重建**：`npx tauri build` 完整打包，包含上述所有修复
 
 ---
 

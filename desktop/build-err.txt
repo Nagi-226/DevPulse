@@ -1,0 +1,22 @@
+$ tauri "build"
+        Info Looking up installed tauri packages to check mismatched versions...
+        Warn The bundle identifier "com.devpulse.app" set in `"tauri.conf.json" identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
+     Running beforeBuildCommand `pnpm build`
+$ tsc && vite build
+   Compiling devpulse v0.1.0 (E:\Github Project\DevPulse\desktop\src-tauri)
+error[E0433]: failed to resolve: use of unresolved module or unlinked crate `devpulse_lib`
+ --> src\main.rs:5:5
+  |
+5 |     devpulse_lib::run()
+  |     ^^^^^^^^^^^^ use of unresolved module or unlinked crate `devpulse_lib`
+  |
+help: there is a crate or module with a similar name
+  |
+5 -     devpulse_lib::run()
+5 +     devpulse::run()
+  |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `devpulse` (bin "devpulse") due to 1 previous error
+failed to build app: failed to build app
+       Error failed to build app: failed to build app

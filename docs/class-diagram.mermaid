@@ -1,0 +1,121 @@
+classDiagram
+    direction TB
+
+    class Repository {
+        +int id
+        +str full_name
+        +str owner
+        +str name
+        +str description
+        +str language
+        +list~str~ topics
+        +int total_stars
+        +int stars_since
+        +int forks
+        +int forks_since
+        +int open_issues
+        +datetime created_at
+        +datetime updated_at
+        +str url
+        +bool has_readme
+        +str readme_summary
+        +list~str~ key_points
+        +list~str~ tags
+        +datetime crawled_at
+        +datetime summarized_at
+        +int trending_rank
+        +str trending_since
+    }
+
+    class WeeklyReport {
+        +int id
+        +datetime week_start
+        +datetime week_end
+        +str language_filter
+        +int total_repos
+        +list~int~ top_repos
+        +str overview_text
+        +datetime generated_at
+        +bool published
+        +datetime published_at
+    }
+
+    class Favorite {
+        +int id
+        +str user_id
+        +int repo_id
+        +datetime created_at
+    }
+
+    class StarHistory {
+        +int id
+        +int repo_id
+        +int total_stars
+        +datetime recorded_at
+    }
+
+    class RepositoryDAO {
+        +create_or_update(data) Repository
+        +bulk_create_or_update(data_list) list~Repository~
+        +get_by_full_name(full_name) Repository?
+        +get_trending_repos(since, limit) list~Repository~
+        +get_repos_by_language(language, limit) list~Repository~
+        +get_repos_without_summary(limit) list~Repository~
+        +search_repos(keyword, language, page, limit) tuple~list, int~
+        +update_summary(repo_id, summary, key_points, tags) None
+        +delete_by_full_name(full_name) bool
+    }
+
+    class FavoriteDAO {
+        +add_favorite(user_id, repo_id) Favorite
+        +remove_favorite(user_id, repo_id) bool
+        +is_favorited(user_id, repo_id) bool
+        +list_favorites(user_id, page, limit) tuple~list~FavoriteItem~, int~
+        +get_favorited_repo_ids(user_id) list~int~
+    }
+
+    class StarHistoryDAO {
+        +record_snapshot(repo_id, total_stars) StarHistory
+        +get_history(repo_id, days) list~StarHistory~
+        +get_bulk_history(repo_ids, days) dict~int, list~
+        +cleanup_old(days) int
+    }
+
+    class CrawlerService {
+        -GitHubClient _github
+        -TrendingScraper _scraper
+        -Semaphore _semaphore
+        +crawl_trending_repos(language, since, limit) list~dict~
+        -_fetch_and_merge(item) dict
+        +close() None
+    }
+
+    class StorageService {
+        -Database _db
+        -CrawlerService _crawler
+        -Summarizer _summarizer
+        +crawl_and_store_trending(language, since, limit) list~dict~
+        +summarize_and_update(repo_ids, batch_size) int
+        +generate_weekly_report(week_start, language_filter) dict
+    }
+
+    class DevPulseScheduler {
+        -AsyncIOScheduler scheduler
+        +_run_pipeline(language, since) None
+        +_run_star_snapshot() None
+        +add_weekly_job(day, hour, minute, language) None
+        +add_daily_snapshot_job(hour) None
+        +start() None
+        +shutdown() None
+    }
+
+    Repository "1" --> "0..*" StarHistory : has history
+    Repository "1" --> "0..*" Favorite : favorited by
+    RepositoryDAO --> Repository : manages
+    FavoriteDAO --> Favorite : manages
+    StarHistoryDAO --> StarHistory : manages
+    StorageService --> CrawlerService : uses
+    StorageService --> RepositoryDAO : uses
+    StorageService --> FavoriteDAO : uses
+    DevPulseScheduler --> StorageService : triggers
+    DevPulseScheduler --> StarHistoryDAO : snapshots
