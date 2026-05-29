@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTrendingStore } from "../stores/useTrendingStore";
+import { useRecommendationStore } from "../stores/useRecommendationStore";
 import { TrendingList } from "../components/TrendingList";
 import { DataSourceTabs } from "../components/DataSourceTabs";
 import { LanguageFilter } from "../components/LanguageFilter";
@@ -7,22 +8,14 @@ import { OfflineBanner } from "../components/OfflineBanner";
 import { getTrendingCache } from "../utils/cache";
 import type { TrendingSource } from "../types";
 
-/** 时间范围选项 */
 const SINCE_OPTIONS = [
   { value: "daily", label: "今日" },
   { value: "weekly", label: "本周" },
   { value: "monthly", label: "本月" },
 ] as const;
 
-/**
- * GitHub Trending 周报列表页（增强版）。
- *
- * 新增功能：
- * - 数据源切换 Tab（GitHub/GitLab/Gitee）
- * - 20+ 语言筛选下拉
- * - 移动端下拉刷新 + 上拉加载更多
- * - 离线缓存自动降级
- */
+type TabType = "trending" | "recommended";
+
 export function TrendingPage() {
   const repos = useTrendingStore((s) => s.repos);
   const loading = useTrendingStore((s) => s.loading);
@@ -35,9 +28,14 @@ export function TrendingPage() {
   const setSince = useTrendingStore((s) => s.setSince);
   const setSource = useTrendingStore((s) => s.setSource);
 
+  const recItems = useRecommendationStore((s) => s.items);
+  const recLoading = useRecommendationStore((s) => s.loading);
+  const recMethod = useRecommendationStore((s) => s.method);
+  const fetchRecommended = useRecommendationStore((s) => s.fetchRecommended);
+
+  const [activeTab, setActiveTab] = useState<TabType>("trending");
   const [offlineDataUsed, setOfflineDataUsed] = useState(false);
 
-  // 首次加载
   useEffect(() => {
     const loadData = async () => {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -62,16 +60,27 @@ export function TrendingPage() {
     loadData();
   }, [fetchTrending, since, language, source]);
 
-  // 数据源切换
+  useEffect(() => {
+    if (activeTab === "recommended") {
+      fetchRecommended(25);
+    }
+  }, [activeTab, fetchRecommended]);
+
   const handleSourceChange = (newSource: TrendingSource) => {
     setSource(newSource);
   };
+
+  // 将推荐数据转为 Trending 格式
+  const recRepos = recItems.map((item) => ({
+    ...item.repo,
+    is_favorited: false,
+  }));
 
   return (
     <div>
       <OfflineBanner />
 
-      {/* 页面标题与过滤器 */}
+      {/* 页面标题与 Tab */}
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -86,44 +95,90 @@ export function TrendingPage() {
             </p>
           </div>
 
-          {/* 时间范围 + 语言筛选 */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* 时间范围 */}
-            <div className="flex rounded-lg border border-slate-700 bg-slate-800/50 p-0.5">
-              {SINCE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSince(opt.value)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    since === opt.value
-                      ? "bg-primary-500 text-white"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                  style={{ minHeight: 36 }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {/* 语言筛选 */}
-            <LanguageFilter value={language} onChange={setLanguage} />
+            {activeTab === "trending" && (
+              <>
+                <div className="flex rounded-lg border border-slate-700 bg-slate-800/50 p-0.5">
+                  {SINCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSince(opt.value)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                        since === opt.value
+                          ? "bg-primary-500 text-white"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                      style={{ minHeight: 36 }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <LanguageFilter value={language} onChange={setLanguage} />
+              </>
+            )}
           </div>
         </div>
 
-        {/* 数据源 Tab */}
-        <div className="mt-4">
-          <DataSourceTabs active={source} onChange={handleSourceChange} />
+        {/* Tab 切换 */}
+        <div className="mt-4 flex gap-1 rounded-lg border border-slate-700 bg-slate-800/50 p-1 w-fit">
+          <button
+            onClick={() => setActiveTab("trending")}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "trending"
+                ? "bg-primary-500 text-white"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+            style={{ minHeight: 36 }}
+          >
+            🔥 Trending
+          </button>
+          <button
+            onClick={() => setActiveTab("recommended")}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "recommended"
+                ? "bg-primary-500 text-white"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+            style={{ minHeight: 36 }}
+          >
+            🧠 为你推荐
+          </button>
         </div>
+
+        {activeTab === "trending" && (
+          <div className="mt-4">
+            <DataSourceTabs active={source} onChange={handleSourceChange} />
+          </div>
+        )}
+
+        {activeTab === "recommended" && recMethod !== "popular" && (
+          <div className="mt-4 rounded-lg bg-primary-500/10 px-4 py-2 text-sm text-primary-400">
+            {recMethod === "collaborative"
+              ? "基于你的浏览偏好个性化推荐"
+              : recMethod === "content"
+              ? "基于你的技术偏好推荐"
+              : "为你推荐热门项目"}
+          </div>
+        )}
       </div>
 
-      {/* 项目列表 */}
-      <TrendingList
-        repos={repos}
-        loading={loading}
-        error={error}
-        onRetry={fetchTrending}
-      />
+      {/* 列表 */}
+      {activeTab === "trending" ? (
+        <TrendingList
+          repos={repos}
+          loading={loading}
+          error={error}
+          onRetry={fetchTrending}
+        />
+      ) : (
+        <TrendingList
+          repos={recRepos}
+          loading={recLoading}
+          error={null}
+          onRetry={() => fetchRecommended(25)}
+        />
+      )}
     </div>
   );
 }

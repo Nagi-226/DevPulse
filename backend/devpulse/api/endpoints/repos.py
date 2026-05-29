@@ -43,6 +43,9 @@ def _repo_to_dict(r: Any) -> dict[str, Any]:
         "trending_rank": r.trending_rank,
         "trending_since": r.trending_since,
         "source": getattr(r, "source", "github"),
+        "confidence_score": getattr(r, "confidence_score", None),
+        "review_status": getattr(r, "review_status", "pending"),
+        "review_required": getattr(r, "review_required", False),
     }
 
 

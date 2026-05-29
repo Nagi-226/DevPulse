@@ -1,4 +1,4 @@
-"""定时任务调度模块 — 含 FCM 推送集成."""
+"""定时任务调度模块 — 含 FCM 推送集成 + 内容审核流程."""
 
 from __future__ import annotations
 
@@ -20,14 +20,16 @@ logger = logging.getLogger(__name__)
 
 
 class DevPulseScheduler:
-    """DevPulse 定时任务调度器（含 FCM 推送集成）."""
+    """DevPulse 定时任务调度器（含 FCM 推送集成 + 内容审核）."""
 
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         self._jobs: dict[str, str] = {}
 
     async def _run_pipeline(self, language: str = "", since: str = "weekly") -> None:
-        """执行周报生成流水线 + FCM 推送.
+        """执行周报生成流水线 + 内容审核 + FCM 推送.
+
+        Phase 4 新增：生成后自动审核 (confidence_score >= threshold → auto-approve).
 
         Args:
             language: 语言过滤.
@@ -58,7 +60,43 @@ class DevPulseScheduler:
                 result.get("phase4_report"),
             )
 
-            # ── FCM 推送（新增）──────────────────
+            # ── Phase 4: 内容审核流程 ──────────────
+            try:
+                from devpulse.services.review_service import ReviewService
+
+                async with db.get_session() as session:
+                    pending = await ReviewService.get_pending_reviews(
+                        session, page=1, page_size=100
+                    )
+                    logger.info(
+                        "Content review: %d pending reviews detected",
+                        pending.get("total", 0),
+                    )
+
+                    # 自动审核: confidence_score >= threshold → auto-approve
+                    threshold = settings.REVIEW_REQUIRED_THRESHOLD
+                    auto_approved = 0
+                    for item in pending.get("items", []):
+                        score = item.get("confidence_score") or 0
+                        if score >= threshold:
+                            try:
+                                await ReviewService.approve_review(
+                                    session, item["id"]
+                                )
+                                auto_approved += 1
+                            except Exception:
+                                pass
+
+                    if auto_approved > 0:
+                        logger.info(
+                            "Auto-approved %d repos (score >= %.2f)",
+                            auto_approved,
+                            threshold,
+                        )
+            except Exception:
+                logger.exception("Content review workflow failed")
+
+            # ── FCM 推送 ───────────────────────────
             report_id = result.get("report_id")
             if report_id:
                 try:

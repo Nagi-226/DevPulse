@@ -3,10 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { OfflineBanner } from "./OfflineBanner";
 import { useAuthStore } from "../stores/useAuthStore";
 
-/** 导航项图标类型 */
-type NavIconType = "search" | "star" | "settings";
+type NavIconType = "search" | "star" | "settings" | "admin";
 
-/** 顶部导航项配置 */
 const NAV_ITEMS = [
   { label: "首页", path: "/" },
   { label: "搜索", path: "/search", icon: "search" as NavIconType },
@@ -14,7 +12,6 @@ const NAV_ITEMS = [
   { label: "设置", path: "/settings", icon: "settings" as NavIconType },
 ] as const;
 
-/** 导航图标组件 */
 function NavIcon({ icon }: { icon: NavIconType }) {
   if (icon === "search") {
     return (
@@ -38,10 +35,17 @@ function NavIcon({ icon }: { icon: NavIconType }) {
       </svg>
     );
   }
+  if (icon === "admin") {
+    return (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    );
+  }
   return null;
 }
 
-/** 网络状态指示器 */
 function OnlineIndicator() {
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true,
@@ -68,10 +72,6 @@ function OnlineIndicator() {
   );
 }
 
-/**
- * 检测是否在鸿蒙 WebView 环境中。
- * 鸿蒙模式下隐藏 Web 导航栏，由原生 TitleBar 接管。
- */
 function isHarmonyOS(): boolean {
   if (typeof window === "undefined") return false;
   const win = window as any;
@@ -81,13 +81,6 @@ function isHarmonyOS(): boolean {
   );
 }
 
-/**
- * 全局页面布局组件。
- *
- * 包含固定顶部导航栏（Logo + 导航链接 + 登录状态 + 网络状态）、OfflineBanner、
- * 主内容区和页脚。
- * 鸿蒙模式下隐藏 Web 内导航栏（由原生 TitleBar 接管）。
- */
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -96,9 +89,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const logout = useAuthStore((s) => s.logout);
 
   const harmonyMode = isHarmonyOS();
-
-  // AuthPage 不显示标准导航栏（独立布局）
   const isAuthPage = location.pathname === "/auth";
+  const isAdmin = user?.role === "admin";
 
   const handleLogout = () => {
     logout();
@@ -107,11 +99,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-900 text-slate-200">
-      {/* 顶部导航栏 — 鸿蒙模式下隐藏 */}
       {!harmonyMode && (
         <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-            {/* Logo */}
             <Link
               to="/"
               className="flex items-center gap-2 text-xl font-bold tracking-tight text-white hover:text-primary-400 transition-colors"
@@ -122,7 +112,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
               DevPulse
             </Link>
 
-            {/* 导航链接 + 登录状态 + 网络状态 */}
             <div className="flex items-center gap-3">
               <ul className="flex items-center gap-1">
                 {NAV_ITEMS.map((item) => {
@@ -146,12 +135,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </li>
                   );
                 })}
+                {/* Phase 4: Admin 入口 */}
+                {isAdmin && (
+                  <li>
+                    <Link
+                      to="/admin"
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        location.pathname.startsWith("/admin")
+                          ? "bg-slate-800 text-primary-400"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                      }`}
+                    >
+                      <NavIcon icon="admin" />
+                      管理
+                    </Link>
+                  </li>
+                )}
               </ul>
 
-              {/* 分隔线 */}
               <div className="mx-1 h-5 w-px bg-slate-700" />
 
-              {/* 登录状态 */}
               {isAuthPage ? null : isAuthenticated ? (
                 <div className="flex items-center gap-2">
                   <Link
@@ -160,6 +163,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     title={user?.email}
                   >
                     {user?.display_name || user?.email?.split("@")[0] || "用户"}
+                    {isAdmin && (
+                      <span className="ml-1 rounded bg-primary-500/20 px-1 py-0.5 text-xs text-primary-400">
+                        admin
+                      </span>
+                    )}
                   </Link>
                   <button
                     onClick={handleLogout}
@@ -177,17 +185,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )}
 
-              {/* 网络状态指示器 */}
               <OnlineIndicator />
             </div>
           </nav>
         </header>
       )}
 
-      {/* 离线横幅（全局） */}
       <OfflineBanner />
 
-      {/* 主内容区 */}
       <main
         className={`mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 ${
           harmonyMode ? "safe-area-padding-top" : ""
@@ -196,7 +201,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* 页脚 — 鸿蒙模式下隐藏 */}
       {!harmonyMode && (
         <footer className="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
           DevPulse &mdash; AI 潮汐 &middot; GitHub Trending 周报

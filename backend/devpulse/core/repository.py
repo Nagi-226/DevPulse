@@ -153,27 +153,42 @@ class RepositoryDAO:
         summary: str,
         key_points: list[str],
         tags: list[str],
+        confidence_score: float | None = None,
+        review_required: bool = False,
     ) -> None:
-        """更新仓库的摘要信息.
+        """更新仓库的摘要信息（含置信度评分 + 审核状态）.
 
         Args:
             repo_id: 仓库 ID.
             summary: LLM 生成的摘要文本.
             key_points: 关键要点列表.
             tags: 标签列表.
+            confidence_score: 置信度评分 (0.0-1.0).
+            review_required: 是否需要人工审核.
         """
+        values: dict = {
+            "readme_summary": summary,
+            "key_points": key_points,
+            "tags": tags,
+            "summarized_at": datetime.now(),
+        }
+        if confidence_score is not None:
+            values["confidence_score"] = confidence_score
+            values["review_required"] = review_required
+            values["review_status"] = "approved" if not review_required else "pending"
+
         await self._session.execute(
             update(Repository)
             .where(Repository.id == repo_id)
-            .values(
-                readme_summary=summary,
-                key_points=key_points,
-                tags=tags,
-                summarized_at=datetime.now(),
-            )
+            .values(**values)
         )
         await self._session.commit()
-        logger.info("Summary updated for repo_id=%d", repo_id)
+        logger.info(
+            "Summary updated for repo_id=%d (confidence=%.2f, review_required=%s)",
+            repo_id,
+            confidence_score or 0,
+            review_required,
+        )
 
     async def delete_by_full_name(self, full_name: str) -> bool:
         """按完整仓库名删除记录.

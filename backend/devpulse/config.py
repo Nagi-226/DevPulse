@@ -51,11 +51,14 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_MODEL: str = "deepseek-chat"
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_PRICE_INPUT_PER_1K: float = 0.00014
+    DEEPSEEK_PRICE_OUTPUT_PER_1K: float = 0.00028
     LLM_PROVIDER: str = "deepseek"
     LLM_MAX_TOKENS: int = 500
     LLM_TEMPERATURE: float = 0.3
     # ── LLM 摘要成本控制 ────────────────────────────────
     LLM_SUMMARY_BATCH_SIZE: int = 5
+    LLM_MONTHLY_BUDGET: float = 50.0
 
     # ── JWT 认证 ────────────────────────────────────────
     JWT_SECRET_KEY: str = "devpulse-dev-secret-change-in-production"
@@ -66,6 +69,17 @@ class Settings(BaseSettings):
     # ── Firebase Cloud Messaging ────────────────────────
     FCM_CREDENTIALS_PATH: str = ""
     FCM_ENABLED: bool = False
+
+    # ── Sentry 错误追踪 (Phase 4 新增) ──────────────────
+    SENTRY_DSN: str = ""
+    ENVIRONMENT: str = "development"
+    DEPLOY_MODE: str = "development"
+
+    # ── CDN ─────────────────────────────────────────────
+    CDN_BASE_URL: str = ""
+
+    # ── 内容审核 (Phase 4 新增) ─────────────────────────
+    REVIEW_REQUIRED_THRESHOLD: float = 0.7
 
     # ── 运行时 ──────────────────────────────────────────
     LOG_LEVEL: str = "INFO"

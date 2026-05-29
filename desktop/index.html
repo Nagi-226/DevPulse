@@ -4,7 +4,42 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="description" content="AI 潮汐 DevPulse — GitHub Trending AI/ML 周报引擎，发现最受关注的开源项目" />
+    <meta name="keywords" content="GitHub, Trending, AI, Machine Learning, 开源, 周报, DevPulse" />
+
+    <!-- Open Graph / SEO -->
+    <meta property="og:title" content="AI 潮汐 DevPulse — GitHub Trending 周报" />
+    <meta property="og:description" content="AI/ML 领域最受关注的开源项目，每周精选" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://devpulse.app" />
+    <meta property="og:image" content="https://devpulse.app/icon.png" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI 潮汐 DevPulse" />
+    <meta name="twitter:description" content="GitHub Trending AI/ML 周报引擎" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DevPulse" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+
+    <!-- Preload 关键资源 -->
+    <link rel="preconnect" href="https://api.devpulse.app" />
+    <link rel="dns-prefetch" href="https://api.devpulse.app" />
+
     <title>AI 潮汐 DevPulse</title>
+
+    <!-- GA4 (Google Analytics) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
   </head>
   <body>
     <div id="root"></div>

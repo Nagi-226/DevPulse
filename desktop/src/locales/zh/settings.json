@@ -1,0 +1,31 @@
+{
+  "title": { "text": "设置" },
+  "subtitle": { "text": "管理通知偏好和离线缓存" },
+  "notifications": {
+    "title": { "text": "推送通知" },
+    "description": { "text": "新周报生成时通过系统通知提醒" },
+    "weekly": { "label": "周报推送" },
+    "important": { "label": "重要项目推送" },
+    "synced": { "text": "偏好已云同步" },
+    "syncing": { "text": "同步中..." }
+  },
+  "cache": {
+    "title": { "text": "离线缓存" },
+    "description": { "text": "断网时自动使用本地缓存数据" },
+    "trendingCount": { "label": "Trending 缓存" },
+    "detailCount": { "label": "详情缓存" },
+    "clear": { "label": "清除全部缓存" },
+    "clearing": { "label": "清除中..." }
+  },
+  "language": {
+    "title": { "text": "界面语言" },
+    "zh": { "label": "中文" },
+    "en": { "label": "English" },
+    "ja": { "label": "日本語" }
+  },
+  "about": {
+    "title": { "text": "关于" },
+    "version": { "text": "DevPulse v0.3.0 — GitHub Trending AI/ML 周报" },
+    "credits": { "text": "数据来源: GitHub Trending · AI 摘要: LLM 驱动" }
+  }
+}

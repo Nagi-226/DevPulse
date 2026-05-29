@@ -1,0 +1,19 @@
+{
+  "title": { "text": "开源项目 Trending 周报" },
+  "subtitle": { "text": "AI/ML 领域最受关注的开源项目" },
+  "tabs": {
+    "trending": { "label": "🔥 Trending" },
+    "recommended": { "label": "🧠 为你推荐" }
+  },
+  "timeRange": {
+    "daily": { "label": "今日" },
+    "weekly": { "label": "本周" },
+    "monthly": { "label": "本月" }
+  },
+  "recommendation": {
+    "personalized": { "text": "基于你的浏览偏好个性化推荐" },
+    "contentBased": { "text": "基于你的技术偏好推荐" },
+    "popular": { "text": "为你推荐热门项目" }
+  },
+  "offlineHint": { "text": "离线缓存" }
+}

@@ -64,9 +64,14 @@ USER devpulse
 # 暴露端口
 EXPOSE 8000
 
+# ── 环境变量默认值 ────────────────────────────
+ENV UVICORN_WORKERS=2
+ENV UVICORN_HOST=0.0.0.0
+ENV UVICORN_PORT=8000
+
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# 启动命令
-CMD ["uvicorn", "devpulse.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# 启动命令（支持 UVICORN_WORKERS 环境变量）
+CMD ["sh", "-c", "uvicorn devpulse.main:app --host ${UVICORN_HOST:-0.0.0.0} --port ${UVICORN_PORT:-8000} --workers ${UVICORN_WORKERS:-2}"]

@@ -1,4 +1,4 @@
-"""DevPulse FastAPI 应用入口."""
+"""DevPulse FastAPI 应用入口 — 含 Sentry 集成."""
 
 from __future__ import annotations
 
@@ -10,12 +10,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from devpulse import __version__
+from devpulse.api.endpoints.admin import router as admin_router
 from devpulse.api.endpoints.auth import router as auth_router
+from devpulse.api.endpoints.interaction import router as interaction_router
+from devpulse.api.endpoints.recommendation import router as recommendation_router
 from devpulse.api.endpoints.repos import router as repos_router
 from devpulse.api.endpoints.scheduler import router as scheduler_router
+from devpulse.api.endpoints.seo import router as seo_router
 from devpulse.config import settings
 from devpulse.core.database import Database
 from devpulse.services.scheduler import DevPulseScheduler
+
+# ── Sentry 初始化 ─────────────────────────────────
+if settings.SENTRY_DSN:
+    from devpulse.services.monitoring import init_sentry
+
+    init_sentry(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+    )
 
 
 @asynccontextmanager
@@ -60,6 +73,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ── Sentry FastAPI middleware ──────────────────────
+if settings.SENTRY_DSN:
+    try:
+        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        app.add_middleware(SentryAsgiMiddleware)
+    except ImportError:
+        pass
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -72,6 +93,10 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(repos_router)
 app.include_router(scheduler_router)
+app.include_router(admin_router)
+app.include_router(interaction_router)
+app.include_router(recommendation_router)
+app.include_router(seo_router)
 
 
 @app.get("/health")
@@ -89,14 +114,10 @@ async def health() -> dict:
     db_status = "disconnected"
     last_report: str | None = None
 
-    # 获取 app 引用（通过 FastAPI 的 app 对象）
     try:
         from devpulse.core.database import Database as DB
-        from sqlalchemy import select as sa_select, text as sa_text
         from devpulse.core.models import WeeklyReport as WR
-
-        # 由于 health 端点无法直接获取 Request，通过模块级 app 访问
-        # 在生产环境中数据库由 lifespan 管理
+        from sqlalchemy import select as sa_select, text as sa_text
     except Exception:
         pass
 

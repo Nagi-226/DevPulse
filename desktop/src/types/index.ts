@@ -30,6 +30,10 @@ export interface Repo {
   tags?: string[];
   /** 当前用户是否已收藏 */
   is_favorited?: boolean;
+  /** Phase 4: 置信度评分 */
+  confidence_score?: number;
+  /** Phase 4: 审核状态 */
+  review_status?: "pending" | "approved" | "rejected";
 }
 
 /** 数据源类型 */
@@ -70,12 +74,12 @@ export interface FavoriteItem {
   total_stars: number;
   stars_since: number;
   tags: string[];
-  created_at: string; // 收藏时间 ISO 8601
+  created_at: string;
 }
 
 /** Star 趋势数据点 */
 export interface StarPoint {
-  date: string; // "2026-05-01"
+  date: string;
   stars: number;
 }
 
@@ -94,22 +98,20 @@ export interface LanguageStat {
 
 /** 通知偏好设置 */
 export interface NotificationPrefs {
-  /** 是否开启推送通知 */
   enabled: boolean;
-  /** 通知触发时机 */
   trigger_on_weekly_report: boolean;
   trigger_on_crawl_complete: boolean;
 }
 
 // ═══════════════════════════════════════════════════════
-// 用户认证类型（Phase 3 新增）
+// 用户认证类型
 // ═══════════════════════════════════════════════════════
 
-/** 用户信息 */
 export interface User {
   id: number;
   email: string;
   display_name?: string;
+  role?: string;
   push_enabled: boolean;
   push_weekly_report: boolean;
   push_important_project: boolean;
@@ -118,7 +120,6 @@ export interface User {
   updated_at?: string;
 }
 
-/** 注册请求体 */
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -126,13 +127,11 @@ export interface RegisterRequest {
   display_name?: string;
 }
 
-/** 登录请求体 */
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
-/** 认证响应体 */
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
@@ -141,8 +140,105 @@ export interface AuthResponse {
   user: User;
 }
 
-/** 语言选项（用于筛选器） */
 export interface LanguageOption {
   value: string;
   label: string;
+}
+
+// ═══════════════════════════════════════════════════════
+// Phase 4: 用户互动类型
+// ═══════════════════════════════════════════════════════
+
+/** 评论 */
+export interface Comment {
+  id: number;
+  user_id: number;
+  display_name: string;
+  content: string;
+  parent_id: number | null;
+  replies_count: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+/** 点赞信息 */
+export interface LikeInfo {
+  liked: boolean;
+  count: number;
+}
+
+/** 互动统计 */
+export interface InteractionStats {
+  likes_count: number;
+  comments_count: number;
+}
+
+// ═══════════════════════════════════════════════════════
+// Phase 4: 推荐类型
+// ═══════════════════════════════════════════════════════
+
+/** 推荐项目 */
+export interface RecommendedRepo {
+  repo: Repo;
+  score: number;
+  method: "collaborative" | "content" | "popular" | "popular_fallback";
+  reason: string;
+}
+
+/** 推荐响应 */
+export interface RecommendationResponse {
+  items: RecommendedRepo[];
+  method: string;
+  fallback_level: number;
+}
+
+// ═══════════════════════════════════════════════════════
+// Phase 4: Admin 类型
+// ═══════════════════════════════════════════════════════
+
+/** 管理后台 Dashboard */
+export interface DashboardData {
+  summary: {
+    dau: number;
+    page_views: number;
+    favorites_count: number;
+    llm_cost: number;
+  };
+  daily_trend: DailyTrend[];
+  total_users: number;
+  total_repos: number;
+}
+
+export interface DailyTrend {
+  date: string;
+  dau: number;
+  page_views: number;
+  new_users: number;
+  crawl_count: number;
+  llm_cost: number;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  display_name?: string;
+  role: string;
+  is_active: boolean;
+  push_enabled: boolean;
+  created_at?: string;
+}
+
+export interface PendingReview {
+  id: number;
+  full_name: string;
+  owner: string;
+  name: string;
+  description?: string;
+  language?: string;
+  readme_summary?: string;
+  key_points?: string[];
+  confidence_score?: number;
+  review_status: string;
+  crawled_at?: string;
+  summarized_at?: string;
 }

@@ -1,51 +1,107 @@
 sequenceDiagram
-    participant Client as 前端/定时器
-    participant API as FastAPI /repos/crawl
-    participant BG as BackgroundTasks
-    participant Crawler as CrawlerService
-    participant Scraper as TrendingScraper
-    participant GitHub as GitHubClient
-    participant Storage as StorageService
-    participant Summarizer as Summarizer
-    participant DB as SQLite
+    actor User
+    participant React as React SPA
+    participant API as FastAPI :8000
+    participant DB as PostgreSQL
+    participant Pillow as Pillow Service
 
-    Client->>API: POST /repos/crawl?language=&since=weekly
-    API->>BG: add_task(_crawl)
-    API-->>Client: {"message": "Crawl task started"}
+    Note over User, Pillow: ── 评论流程 ──
 
-    Note over BG,DB: === 后台异步执行 ===
+    User->>React: 输入评论 + 点击发送
+    React->>API: POST /repos/{full_name}/comments<br/>{content, parent_id?}
+    API->>API: JWT 认证
+    API->>DB: INSERT INTO comments
+    API-->>React: {comment_id, created_at}
+    React->>React: 乐观更新评论列表
 
-    BG->>Crawler: crawl_trending_repos(language, since, limit=25)
-    
-    Crawler->>Scraper: scrape_trending(language, since)
-    Scraper-->>Crawler: trending_list (25 items, 含 stars_since)
+    Note over User, Pillow: ── 点赞流程 (Toggle) ──
 
-    loop 每个 trending item (并发5)
-        Crawler->>GitHub: fetch_repo(owner, repo)
-        GitHub-->>Crawler: {total_stars, forks, topics, open_issues, created_at, updated_at}
-        Crawler->>Crawler: _fetch_and_merge: 合并页面+API数据
+    User->>React: 点击 👍
+    React->>API: POST /repos/{full_name}/like
+    API->>DB: SELECT like WHERE user_id+repo_id
+    alt 未点赞
+        API->>DB: INSERT INTO likes
+        API->>DB: INSERT INTO user_behaviors (action='like')
+        API-->>React: {liked: true, count: 129}
+    else 已点赞
+        API->>DB: DELETE FROM likes
+        API-->>React: {liked: false, count: 128}
     end
 
-    Crawler-->>BG: merged repos list
+    Note over User, Pillow: ── 分享流程 ──
 
-    BG->>Storage: crawl_and_store_trending(language, since, limit)
-    
-    loop 每个 repo
-        Storage->>DB: create_or_update(repo_data)
-        DB-->>Storage: Repository obj
+    User->>React: 点击分享
+    React->>React: 弹出 ShareMenu
+    alt 复制链接
+        React->>React: navigator.clipboard.writeText(url)
+    else 生成分享图
+        React->>API: GET /repos/{full_name}/share-image
+        API->>Pillow: 生成分享图 (1200x630)
+        Pillow-->>API: PNG bytes
+        API-->>React: image/png
+        React->>React: 触发下载
     end
 
-    Note over Storage: 存储完成后自动触发 LLM 摘要
+    Note over User, Pillow: ── 推荐引擎训练/预测流 ──
 
-    Storage->>DB: get_repos_without_summary(limit=25)
-    DB-->>Storage: needs_summary list
+    User->>React: 切换到"为你推荐"Tab
+    React->>API: GET /repos/recommended?limit=25<br/>Authorization: Bearer token
+    API->>API: JWT 认证 (get_optional_user)
 
-    loop 每批5个
-        Storage->>Summarizer: summarize_batch(batch_repos)
-        Summarizer->>Summarizer: LLM API 调用 (DeepSeek/GPT/Claude)
-        Summarizer-->>Storage: [{summary, key_points, tags}]
-        Storage->>DB: update_summary(repo_id, summary, key_points, tags)
+    alt 已登录用户
+        API->>DB: SELECT user_behaviors WHERE user_id
+        DB-->>API: 行为记录
+
+        alt 行为 ≥ 3 条 (L1 协同过滤)
+            API->>DB: SELECT all user_behaviors (user-repo matrix)
+            API->>API: scikit-learn cosine_similarity
+            API->>DB: SELECT repos WHERE id IN (推荐)
+            API-->>React: [{repo, score, reason, method:"collaborative"}]
+
+        else 行为 < 3 条但有语言偏好 (L2 内容过滤)
+            API->>DB: SELECT repos WHERE language IN (...) ORDER BY stars DESC
+            API-->>React: [{repo, score, reason, method:"content"}]
+
+        else 零行为 (L3 全局热门)
+            API->>DB: SELECT repos ORDER BY trending_rank ASC, stars DESC
+            API-->>React: [{repo, score, reason, method:"popular"}]
+        end
+
+    else 匿名用户
+        API->>DB: SELECT repos ORDER BY trending_rank ASC, stars DESC
+        API-->>React: [{repo, score, reason, method:"popular"}]
     end
 
-    Storage-->>BG: "摘要完成: N 个"
-    BG->>BG: logger.info("Background crawl+summarize completed")
+    Note over User, Pillow: ── 内容审核 → 定时发布流 ──
+
+    participant Scheduler as APScheduler
+    participant Quality as ContentQuality
+
+    Scheduler->>API: 触发爬取 (cron: mon 09:00)
+    API->>API: Playwright 抓取 + LLM 摘要
+    API->>Quality: 计算置信度评分
+    Quality-->>API: confidence_score + review_status
+
+    alt confidence_score ≥ 0.7
+        API->>DB: review_status = "approved"
+    else confidence_score < 0.7
+        API->>DB: review_status = "pending" (待人工审核)
+    end
+
+    User->>API: GET /admin/pending-reviews (Admin 角色)
+    API->>DB: SELECT repos WHERE review_status="pending"
+    DB-->>API: 低分项目列表
+    API-->>User: [{repo, confidence_score, score_breakdown}]
+
+    alt 审核通过
+        User->>API: POST /admin/reviews/{id}/approve
+        API->>DB: review_status = "approved"
+    else 审核拒绝
+        User->>API: POST /admin/reviews/{id}/reject
+        API->>DB: review_status = "rejected"
+    end
+
+    Scheduler->>API: 触发发布 (cron: mon 10:00)
+    API->>DB: SELECT repos WHERE review_status="approved" AND published=false
+    API->>DB: INSERT INTO weekly_reports (published=true)
+    API->>API: FCM 推送通知

@@ -535,12 +535,84 @@ GitHub Trending 页面 → Playwright 抓取 → 数据清洗
 
 ### 与 Phase 4（运营增强）的边界
 
-Phase 3 的终点是**三端发布**，以下功能留给 Phase 4（0.3.1→1.0.0）：
-- 社区功能（评论、点赞、分享）
-- AI 个性化推荐（基于收藏历史的协同过滤）
-- 付费订阅（Pro 版高级分析）
-- 管理后台（数据看板、用户管理）
-- iOS 适配
+Phase 3 的终点是**三端发布**，以下功能留给 Phase 4（0.3.1→0.4.0 → 指向 1.0.0）：
+- 生产环境部署（VPS + HTTPS + 监控告警）
+- 内容品控（自动审核 + 人工管理后台）
+- 用户互动（评论、点赞、分享）
+- AI 个性化推荐（基于收藏/浏览历史）
+- 性能优化（SSR、CDN、Lighthouse ≥90）
+- 多语言 i18n + SEO
+- iOS 适配（可选，根据用户需求）
+
+---
+
+## Phase 4 迭代路线图（0.3.1 → 0.4.0）
+
+共 8 个小版本。Phase 4 的核心目标是**从 MVP 演进为生产级产品**——真实部署、内容品控、用户增长、性能打磨，最终以 0.4.0 作为 v1.0.0 的候选发布版。
+
+### 迭代总览
+
+```
+0.3.0 (基线) ──→ 0.3.3 (用户互动) ──→ 0.3.6 (管理后台) ──→ 0.4.0 (正式版)
+      │                │                    │
+      ├── 生产部署      ├── 评论/点赞/分享   ├── 数据看板
+      ├── HTTPS+监控    ├── AI推荐引擎       ├── 用户管理
+      └── 自动周报      └── 性能+CDN         └── i18n+SEO
+```
+
+### 详细迭代计划
+
+| 版本 | 主题 | 目标 | 关键变更 | 验收标准 |
+|------|------|------|---------|---------|
+| **0.3.1** 🏭 | 生产部署 | VPS/云主机真实部署，域名+HTTPS，不再依赖开发环境 | Nginx + Let's Encrypt SSL；Docker Compose 生产配置；`devpulse.app` 域名绑定；日志轮转 + 错误报警（Sentry）；环境变量管理（`.env.production`）；`api-client.ts` 正式 API 地址 | `curl https://api.devpulse.app/health` 200；三端均可通过公网 API 使用 |
+| **0.3.2** 📰 | 内容品控 | 周报自动生成 → 人工审核 → 定时发布 | LLM 摘要置信度评分（`confidence_score` 0-1）；低分项目标记 `review_required`；`/admin/pending-reviews` 审核端点；APScheduler 每周一 09:00 自动生成 + 10:00 自动发布已审核内容；Markdown → HTML 渲染优化 | 周报自动生成 → 审核页勾选 → 定时发布 → 前端展示 |
+| **0.3.3** 💬 | 用户互动 | 评论、点赞、分享 | `Comment` 模型（user_id + repo_id + content）；`POST/DELETE /repos/{full_name}/comments`；`POST /repos/{full_name}/like` 点赞接口；详情页评论列表 + 输入框；分享按钮（复制链接 + 生成分享图）；`InteractionService` 互动统计 | 详情页底部查看评论→发表评论→点赞→分享 |
+| **0.3.4** 🧠 | AI 推荐 | 基于用户行为的个性化 Trending 排序 | `UserBehavior` 模型（浏览/收藏/点赞历史）；协同过滤推荐引擎（Python `scikit-learn` cosine similarity）；`GET /repos/recommended` 推荐端点；首页"为你推荐"Tab；冷启动策略（新用户显示全局热门） | 浏览 3 个项目后 → "为你推荐"展示相关仓库 |
+| **0.3.5** ⚡ | 性能优化 | Lighthouse PWA ≥90，首屏 <1.5s | React `lazy()` + `Suspense` 路由级代码分割；Vite `manualChunks` 拆分 vendor/ui/charts；图片懒加载 `loading="lazy"`；Nginx gzip/brotli 压缩；CDN（Cloudflare）；PWA `manifest.json` + Service Worker | Lighthouse Performance ≥90；LCP <1.5s；离线 PWA 可用 |
+| **0.3.6** 📊 | 管理后台 | 数据看板 + 用户管理 + 内容审核 | `pages/AdminPage.tsx`（仅 admin 角色可见）；Dashboard 看板（DAU/周报阅读量/收藏数/LLM 成本）；用户列表 + 封禁/解禁；爬虫手动触发面板；`User` 模型新增 `role` 字段（user/admin） | Admin 登录 → 看板数据实时 → 可审核/管理用户 |
+| **0.3.7** 🌍 | 多语言 + SEO | i18n 国际化 + 搜索引擎曝光 | `react-i18next` 集成；中/英/日 三语翻译文件；语言检测（浏览器 preference + 手动切换）；`<meta>` SEO 标签（title/description/og:image）；sitemap.xml 动态生成；Google Analytics 埋点 | 切换语言 → 全站文案实时更新；Google 可索引项目详情页 |
+| **0.3.8** 🧪 | QA + 发布准备 | 全端回归 + v1.0.0-rc | 更新 `test-matrix.md`（三端 × 全功能）；M6/M8 门禁执行；`npm run test` + `pytest` 覆盖率 ≥80%；压力测试（wrk 1000 并发）；发布公告文案；CHANGELOG.md | 全端回归通过率 >95%；门禁全通；0.4.0 CHANGELOG 就绪 |
+| **0.4.0** 🚀 | 正式版发布 | v1.0.0-rc 公开上线 | `__version__ = "0.4.0"`（内部版本号，对外宣发 v1.0）；Google Play 上架审核；AppGallery 正式上架；Product Hunt 发布；官方 Twitter/小红书 宣发 | 三商店可下载；官网可访问；Product Hunt 上线 |
+
+### 迭代依赖关系
+
+```
+0.3.1 (生产部署) ──┬──→ 0.3.2 (内容品控) ──→ 0.3.6 (管理后台)
+                    │
+                    ├──→ 0.3.3 (用户互动) ──→ 0.3.4 (AI推荐)
+                    │         │
+                    ├──→ 0.3.5 (性能优化) ←─┘ (联合优化首屏)
+                    │         │
+                    └──→ 0.3.7 (i18n+SEO)
+                              │
+0.3.8 (QA) ←─────────────────┘  0.3.2-0.3.7 并行完成
+    │
+0.4.0 (正式发布)
+```
+
+> **关键路径**：0.3.1 是基础（必须先部署才能测性能/SEO），0.3.2-0.3.7 可并行推进，0.3.8 是汇总 QA 关卡，0.4.0 是发布里程碑。
+
+### 技术选型新增
+
+| 领域 | 技术 | 理由 |
+|------|------|------|
+| 部署 | Nginx + Let's Encrypt + Docker Compose | 免费、成熟、社区广泛使用 |
+| 监控 | Sentry（错误追踪） + UptimeRobot（可用性） | 免费 tier 够用，SDK 成熟 |
+| CDN | Cloudflare（免费计划） | 全球节点、DDoS 防护、自动 HTTPS |
+| 推荐引擎 | Python scikit-learn cosine_similarity | 轻量、无需 GPU、数据量小够用 |
+| PWA | Workbox + vite-plugin-pwa | 自动生成 Service Worker |
+| i18n | react-i18next | React 生态最成熟方案 |
+| 分析 | Google Analytics 4 | 免费、全平台 SDK |
+| SSL | Let's Encrypt + certbot auto-renew | 免费、自动化 |
+
+### 与 v1.0.0 的边界
+
+0.4.0 作为 v1.0.0-rc，以下功能留给真正的 1.0.0：
+- iOS 适配（需 Apple Developer 账号 + Mac 构建环境）
+- 付费订阅（Stripe/Paddle 集成 + 会员系统）
+- 开放 API（API Key 管理 + Rate Limit + 文档）
+- Community 社区（论坛/Discord 集成）
+- 企业版（私有部署、SSO、SLA）
 
 ---
 

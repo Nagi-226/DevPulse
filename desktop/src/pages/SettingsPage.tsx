@@ -3,17 +3,8 @@ import { useNotificationStore } from "../stores/useNotificationStore";
 import { useAuthStore } from "../stores/useAuthStore";
 import { getCacheStats, clearAllCache } from "../utils/cache";
 import { api } from "../utils/api-client";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
-/**
- * 设置页面。
- *
- * 功能：
- * - 推送通知开关（toggle）
- * - 推送偏好（周报推送 / 重要项目推送）
- * - 离线缓存状态显示
- * - 云同步状态标识
- * - 关于信息
- */
 export function SettingsPage() {
   const enabled = useNotificationStore((s) => s.enabled);
   const toggle = useNotificationStore((s) => s.toggle);
@@ -52,7 +43,6 @@ export function SettingsPage() {
     }
   };
 
-  /** 同步推送偏好到云端 */
   const syncPreferences = async (
     key: "push_weekly_report" | "push_important_project",
     value: boolean,
@@ -70,14 +60,22 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* 页面标题 */}
       <h1 className="text-2xl font-bold text-white">设置</h1>
       <p className="mt-1 text-sm text-slate-400">
         管理通知偏好和离线缓存
       </p>
 
-      {/* 推送通知开关 */}
+      {/* 界面语言 (Phase 4) */}
       <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+        <h2 className="text-base font-semibold text-white">界面语言</h2>
+        <p className="mt-1 text-sm text-slate-400">选择显示语言</p>
+        <div className="mt-3">
+          <LanguageSwitcher />
+        </div>
+      </div>
+
+      {/* 推送通知开关 */}
+      <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-white">
@@ -103,7 +101,6 @@ export function SettingsPage() {
           </button>
         </div>
 
-        {/* 推送偏好子项（仅登录用户可见） */}
         {isAuthenticated && (
           <div className="mt-4 space-y-3 border-t border-slate-700 pt-4">
             <div className="flex items-center justify-between">
@@ -148,7 +145,6 @@ export function SettingsPage() {
                 />
               </button>
             </div>
-            {/* 云同步状态 */}
             <div className="flex items-center gap-2 text-xs">
               {syncing ? (
                 <>
@@ -204,7 +200,7 @@ export function SettingsPage() {
       <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
         <h2 className="text-base font-semibold text-white">关于</h2>
         <p className="mt-2 text-sm text-slate-400">
-          DevPulse v0.3.0 — GitHub Trending AI/ML 周报
+          DevPulse v0.4.0 — GitHub Trending AI/ML 周报
         </p>
         <p className="mt-1 text-xs text-slate-500">
           数据来源: GitHub Trending · AI 摘要: LLM 驱动

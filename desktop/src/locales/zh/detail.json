@@ -1,0 +1,34 @@
+{
+  "back": { "label": "返回列表" },
+  "actions": {
+    "like": { "label": "点赞" },
+    "star": { "label": "收藏" },
+    "share": { "label": "分享" },
+    "viewOnGithub": { "label": "在 GitHub 上查看" }
+  },
+  "stats": {
+    "stars": { "label": "Stars" },
+    "forks": { "label": "Forks" },
+    "issues": { "label": "Issues" }
+  },
+  "aiSummary": {
+    "title": { "text": "AI 摘要" },
+    "confidence": { "label": "置信度" },
+    "keyPoints": { "label": "核心要点" }
+  },
+  "starTrend": {
+    "title": { "text": "Star 趋势（近 30 天）" },
+    "empty": { "text": "Star 历史数据积累中..." }
+  },
+  "comment": {
+    "title": { "text": "评论" },
+    "placeholder": { "text": "写下你的想法..." },
+    "send": { "label": "发送" },
+    "sending": { "label": "发送中..." },
+    "loginHint": { "text": "后即可发表评论" },
+    "loginAction": { "label": "登录" },
+    "empty": { "text": "暂无评论，来发表第一条吧" },
+    "loadMore": { "label": "加载更多评论" },
+    "charCount": { "text": "/2000" }
+  }
+}

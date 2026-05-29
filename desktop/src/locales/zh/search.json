@@ -1,0 +1,5 @@
+{
+  "placeholder": { "text": "搜索开源项目..." },
+  "noResults": { "text": "未找到匹配的项目" },
+  "resultCount": { "text": "共 {{count}} 个结果" }
+}

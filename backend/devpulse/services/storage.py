@@ -216,6 +216,8 @@ class StorageService:
                             summary=result.get("summary", ""),
                             key_points=result.get("key_points", []),
                             tags=result.get("tags", []),
+                            confidence_score=result.get("confidence_score"),
+                            review_required=result.get("review_required", False),
                         )
                         total_summarized += 1
                     except Exception:

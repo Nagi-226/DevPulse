@@ -1,4 +1,4 @@
-"""FastAPI 依赖注入 — JWT 认证中间件."""
+"""FastAPI 依赖注入 — JWT 认证中间件 + Admin 鉴权."""
 
 from __future__ import annotations
 
@@ -7,7 +7,9 @@ import logging
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 
+from devpulse.core.models import User
 from devpulse.services.auth_service import auth_service
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,7 @@ async def get_current_user(
 
     Raises:
         HTTPException 401: Token 缺失、无效或过期.
+        HTTPException 403: 用户已被封禁.
     """
     if credentials is None:
         raise HTTPException(
@@ -75,7 +78,30 @@ async def get_current_user(
             detail="Token 缺少用户标识",
         )
 
-    return {"user_id": int(user_id), "email": email or ""}
+    user_id_int = int(user_id)
+
+    # 检查用户是否被封禁
+    try:
+        from devpulse.core.database import Database
+
+        db: Database | None = getattr(request.app.state, "db", None)
+        if db is not None:
+            async with db.get_session() as session:
+                result = await session.execute(
+                    select(User).where(User.id == user_id_int)
+                )
+                user_row = result.scalar_one_or_none()
+                if user_row is not None and not user_row.is_active:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="账户已被封禁",
+                    )
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # 数据库不可用时跳过检查
+
+    return {"user_id": user_id_int, "email": email or ""}
 
 
 async def get_optional_user(
@@ -100,3 +126,58 @@ async def get_optional_user(
         pass
 
     return None
+
+
+async def get_admin_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict:
+    """Admin 角色鉴权依赖.
+
+    用法:
+        admin_user: dict = Depends(get_admin_user)
+
+    先验证 JWT Token 有效性，再检查 user.role == "admin".
+
+    Raises:
+        HTTPException 401: Token 缺失或无效.
+        HTTPException 403: 非 admin 角色.
+    """
+    # 基础 JWT 认证
+    current_user = await get_current_user(request, credentials)
+
+    # 检查 admin 角色
+    try:
+        from devpulse.core.database import Database
+
+        db: Database | None = getattr(request.app.state, "db", None)
+        if db is not None:
+            async with db.get_session() as session:
+                result = await session.execute(
+                    select(User).where(User.id == current_user["user_id"])
+                )
+                user_row = result.scalar_one_or_none()
+                if user_row is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="用户不存在",
+                    )
+                if getattr(user_row, "role", "user") != "admin":
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="需要管理员权限",
+                    )
+                current_user["role"] = user_row.role
+                return current_user
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="需要管理员权限",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限",
+        )
