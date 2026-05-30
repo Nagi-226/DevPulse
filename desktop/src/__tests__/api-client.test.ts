@@ -25,7 +25,7 @@ describe('API Client', () => {
       await api.getTrending();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/v1/repos/trending?since=weekly&language=&page=1&page_size=25',
+        '/api/v1/repos/trending?since=weekly&language=&source=github&page=1&page_size=25',
         {
           headers: { 'Content-Type': 'application/json' },
         }

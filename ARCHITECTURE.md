@@ -239,34 +239,60 @@ PR Review Checklist:
 
 ```
 DevPulse/
-├── core/                  # Python: 数据抓取与 LLM 摘要
-│   ├── crawler/           # GitHub Trending 页面解析器
-│   │   ├── trending_parser.py
-│   │   └── repo_detail.py
-│   ├── summarizer/        # LLM 摘要生成
-│   │   └── llm_summary.py
-│   ├── agents/            # MetaGPT Agent 角色定义
-│   │   ├── crawler_agent.py
-│   │   ├── analyzer_agent.py
-│   │   ├── summarizer_agent.py
-│   │   └── publisher_agent.py
-│   ├── pipeline/          # MetaGPT SOP 流水线编排
-│   │   └── weekly_report_flow.py
-│   └── scheduler/         # 定时任务 (APScheduler)
-│       └── jobs.py
-├── api-server/            # FastAPI 服务端
-│   ├── main.py            # 应用入口
-│   ├── routers/           # 路由模块
-│   │   ├── trending.py
-│   │   ├── projects.py
-│   │   └── summary.py
-│   ├── models/            # 数据库模型 (SQLAlchemy)
-│   │   ├── project.py
-│   │   └── weekly_report.py
-│   ├── services/          # 业务服务
-│   │   ├── trending_service.py
-│   │   └── llm_service.py
-│   └── requirements.txt
+├── backend/               # Python 后端
+│   ├── devpulse/
+│   │   ├── main.py        # FastAPI 应用入口
+│   │   ├── config.py      # 配置管理 (Pydantic Settings)
+│   │   ├── api/           # API 路由层
+│   │   │   ├── endpoints/
+│   │   │   │   ├── repos.py         # 仓库 CRUD + Trending
+│   │   │   │   ├── auth.py          # 认证 (register/login)
+│   │   │   │   ├── admin.py         # 管理后台
+│   │   │   │   ├── interaction.py   # 评论/点赞/收藏
+│   │   │   │   ├── recommendation.py # AI 推荐
+│   │   │   │   ├── scheduler.py     # 定时任务管理
+│   │   │   │   └── seo.py           # sitemap.xml
+│   │   │   └── dependencies.py      # FastAPI 依赖注入
+│   │   ├── core/          # 数据层
+│   │   │   ├── database.py          # 数据库连接管理
+│   │   │   ├── models.py            # SQLAlchemy 模型定义
+│   │   │   └── repository.py        # 仓库数据访问层
+│   │   ├── agents/        # MetaGPT Agent 角色定义
+│   │   │   ├── base.py
+│   │   │   ├── crawler_agent.py
+│   │   │   ├── analyzer_agent.py
+│   │   │   ├── summarizer_agent.py
+│   │   │   └── publisher_agent.py
+│   │   ├── pipeline/      # 流水线编排
+│   │   │   └── meta_gpt_coordinator.py
+│   │   ├── services/      # 业务服务层
+│   │   │   ├── crawler.py
+│   │   │   ├── github_client.py
+│   │   │   ├── trending_scraper.py
+│   │   │   ├── trending_source.py
+│   │   │   ├── summarizer.py
+│   │   │   ├── recommendation.py
+│   │   │   ├── auth_service.py
+│   │   │   ├── fcm_service.py
+│   │   │   ├── monitoring.py
+│   │   │   ├── review_service.py
+│   │   │   ├── stats_service.py
+│   │   │   ├── storage.py
+│   │   │   ├── scheduler.py
+│   │   │   ├── pipeline.py
+│   │   │   └── llm/            # LLM 多厂商适配器
+│   │   │       ├── base.py
+│   │   │       ├── factory.py
+│   │   │       ├── openai_provider.py
+│   │   │       ├── anthropic_provider.py
+│   │   │       ├── ollama_provider.py
+│   │   │       ├── deepseek_provider.py
+│   │   │       └── prompts.py
+│   │   └── cli/           # CLI 工具
+│   │       └── main.py
+│   ├── requirements.txt
+│   ├── requirements-docker.txt
+│   └── Dockerfile
 ├── desktop/               # Tauri + React 桌面应用
 │   ├── src-tauri/         # Rust 后端
 │   │   ├── src/
@@ -274,9 +300,13 @@ DevPulse/
 │   │   └── Cargo.toml
 │   ├── src/               # React 前端
 │   │   ├── App.tsx
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── stores/
+│   │   ├── main.tsx
+│   │   ├── components/    # UI 组件
+│   │   ├── pages/         # 页面
+│   │   ├── stores/        # Zustand 状态管理
+│   │   ├── utils/         # 工具函数 (api-client, i18n, cache)
+│   │   ├── types/         # TypeScript 类型定义
+│   │   └── locales/       # i18n 翻译文件 (zh/en/ja)
 │   └── package.json
 ├── mobile/                # Capacitor 移动端壳
 │   ├── capacitor.config.ts
@@ -285,15 +315,9 @@ DevPulse/
 ├── harmony/               # 鸿蒙适配层
 │   ├── entry/
 │   └── webview/
-├── shared/                # 跨平台共享代码
-│   ├── components/        # 共享 UI 组件
-│   ├── types/             # TypeScript 类型定义
-│   │   ├── project.ts
-│   │   └── api.ts
-│   ├── utils/             # 工具函数
-│   │   ├── api-client.ts
-│   │   └── formatters.ts
-│   └── constants/
+├── tests/                 # 测试
+│   ├── __init__.py
+│   └── conftest.py        # 测试基础设施 (fixtures)
 ├── scripts/               # 构建与验证脚本
 │   ├── dev.bat            # 一键启动开发环境
 │   ├── build_exe.bat      # PyInstaller 打包
@@ -710,6 +734,21 @@ npm run tauri build
 
 ---
 
+## Phase 5 完成状态（截止 2026-05-30）
+
+| 版本 | 完成日期 | 状态 | 备注 |
+|------|---------|:----:|------|
+| 0.4.1 | 2026-05-30 | ✅ | BugFix: 6 缺陷修复 + 测试骨架 |
+| 0.4.2 | 2026-05-30 | ✅ | 后端测试: 72 用例, 8 模块 |
+| 0.4.3 | 2026-05-30 | ✅ | 前端测试: 27 用例, Vitest + RTL |
+| 0.4.4 | 2026-05-30 | ✅ | CI 修复: 三 workflow 全绿 |
+| 0.4.5 | 2026-05-30 | ✅ | 性能验证: wrk 模板 + 脚本 |
+| 0.4.6 | 2026-05-30 | ✅ | E2E: 5 Playwright 场景 |
+| 0.4.7 | 2026-05-30 | ✅ | Docker 验证: 部署检查清单 |
+| 0.5.0 | 2026-05-30 | ✅ | 质量发布: M6/M8 门禁 + CHANGELOG |
+
+---
+
 ## 开发阶段规划
 
 | 阶段 | 版本范围 | 目标 | 交付物 |
@@ -718,6 +757,7 @@ npm run tauri build
 | Phase 2: 移动端 | 0.1.1 → 0.2.0 | Android APK 发布 | Capacitor 打包版本 |
 | Phase 3: 鸿蒙 | 0.2.1 → 0.3.0 | 鸿蒙适配 | 鸿蒙应用包 |
 | Phase 4: 运营增强 | 0.3.1 → 1.0.0 | 定时更新、推送通知、用户反馈、多主题订阅 | 完整产品 |
+| Phase 5: 质量加固 | 0.4.1 → 0.5.0 | 测试覆盖 + CI 硬化 + 门禁审计 + Docker 验证 | 门禁报告 + 测试套件 + CHANGELOG |
 
 ---
 

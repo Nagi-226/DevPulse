@@ -90,12 +90,14 @@ app.add_middleware(
 )
 
 # 挂载 API 路由
+# ⚠️ 顺序很重要: interaction_router / recommendation_router 必须在 repos_router 之前注册，
+# 否则 repos_router 的 GET /{full_name:path} 通配路由会拦截所有子路径请求。
 app.include_router(auth_router)
+app.include_router(interaction_router)
+app.include_router(recommendation_router)
 app.include_router(repos_router)
 app.include_router(scheduler_router)
 app.include_router(admin_router)
-app.include_router(interaction_router)
-app.include_router(recommendation_router)
 app.include_router(seo_router)
 
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { OfflineBanner } from "./OfflineBanner";
 import { useAuthStore } from "../stores/useAuthStore";
 
@@ -184,6 +185,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   登录
                 </Link>
               )}
+
+              <LanguageSwitcher />
 
               <OnlineIndicator />
             </div>

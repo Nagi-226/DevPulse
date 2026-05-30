@@ -170,6 +170,19 @@ DevPulse/
 
 ---
 
+## Test Coverage (v0.5.0)
+
+| Layer | Tests | Framework | Status |
+|-------|:-----:|-----------|:------:|
+| Backend | **72** | pytest + httpx + SQLite :memory: | ✅ Green |
+| Frontend | **27** | Vitest + React Testing Library | ✅ Green |
+| E2E | **5** | Playwright | ✅ Green |
+| **Total** | **99** + 5 E2E | — | ✅ All Passing |
+
+> M6 Reliability Gate: PASS | M8 Quality Audit: PASS (5 dimensions)
+
+---
+
 ##  Roadmap
 
 | Phase | Version Range | Goal |

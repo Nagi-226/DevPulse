@@ -49,6 +49,15 @@ Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
+# ── Package Manager Cache ───────────────────────────────
+.pnpm-store/
+.yarn/
+
+# ── AI Assistant Workspace ────────────────────────────────
+.workbuddy/
+.claude/
+.codex/
+
 # ── Misc ───────────────────────────────────────────────────
 *.log
 *.tmp

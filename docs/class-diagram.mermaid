@@ -1,116 +1,36 @@
 classDiagram
-    direction TB
-
-    class User {
-        +int id PK
-        +str email UK
-        +str password_hash
-        +str display_name
-        +str role "user|admin"
-        +bool is_active
-        +bool push_enabled
-        +bool push_weekly_report
-        +bool push_important_project
-        +str fcm_token
-        +datetime created_at
-        +datetime updated_at
+    class TestFixtures {
+        +async_client() AsyncClient
+        +test_db() Database
+        +auth_headers(async_client, test_db) dict
+        +admin_headers(async_client, test_db) dict
+        +seed_repos(test_db) list~Repository~
+        +seed_users(test_db) tuple~User, User~
     }
 
-    class Repository {
-        +int id PK
-        +str full_name UK
-        +str owner
-        +str name
-        +str description
-        +str language
-        +list~str~ topics
-        +int total_stars
-        +int stars_since
-        +int forks
-        +int forks_since
-        +int open_issues
-        +datetime created_at
-        +datetime updated_at
-        +str url
-        +bool has_readme
-        +str readme_content
-        +str readme_summary
-        +list~str~ key_points
-        +list~str~ tags
-        +float confidence_score
-        +str review_status "pending|approved|rejected"
-        +datetime crawled_at
-        +datetime summarized_at
-        +int trending_rank
-        +str trending_since
-        +str source
+    class AsyncClient {
+        +get(url, headers) Response
+        +post(url, json, headers) Response
+        +put(url, json, headers) Response
+        +delete(url, headers) Response
     }
 
-    class Comment {
-        +int id PK
-        +int user_id FK
-        +int repo_id FK
-        +str content
-        +int parent_id FK
-        +bool is_deleted
-        +datetime created_at
-        +datetime updated_at
+    class Database {
+        +create_tables()
+        +drop_tables()
+        +get_session() AsyncSession
+        +close()
     }
 
-    class Like {
-        +int id PK
-        +int user_id FK
-        +int repo_id FK
-        +datetime created_at
+    class FactoryFunctions {
+        +create_user(session, email, password, role, is_active) User
+        +create_repo(session, full_name, language, source, total_stars, trending_rank, trending_since, review_status) Repository
+        +create_comment(session, user_id, repo_id, content, parent_id) Comment
+        +create_like(session, user_id, repo_id) Like
+        +create_favorite(session, user_id, repo_id) Favorite
+        +create_user_behavior(session, user_id, repo_id, action_type) UserBehavior
     }
 
-    class UserBehavior {
-        +int id PK
-        +int user_id FK
-        +int repo_id FK
-        +str action_type "view|star|like|share|comment"
-        +float weight
-        +datetime created_at
-    }
-
-    class Favorite {
-        +int id PK
-        +int user_id FK
-        +int repo_id FK
-        +datetime created_at
-    }
-
-    class DailyStats {
-        +int id PK
-        +date date UK
-        +int dau
-        +int page_views
-        +int new_users
-        +int crawl_count
-        +float llm_cost
-        +datetime created_at
-    }
-
-    class WeeklyReport {
-        +int id PK
-        +datetime week_start UK
-        +datetime week_end
-        +str language_filter
-        +str source_filter
-        +int total_repos
-        +list~int~ top_repos
-        +str overview_text
-        +datetime generated_at
-        +bool published
-        +datetime published_at
-    }
-
-    User "1" -- "N" Comment : authors
-    User "1" -- "N" Like : gives
-    User "1" -- "N" UserBehavior : performs
-    User "1" -- "N" Favorite : creates
-    Repository "1" -- "N" Comment : receives
-    Repository "1" -- "N" Like : receives
-    Repository "1" -- "N" UserBehavior : tracked_for
-    Repository "1" -- "N" Favorite : favorited_in
-    Comment "1" -- "N" Comment : parent_of
+    TestFixtures --> AsyncClient : produces
+    TestFixtures --> Database : produces
+    FactoryFunctions --> Database : uses AsyncSession

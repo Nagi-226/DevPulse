@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
+from devpulse.config import settings
 from devpulse.core.database import Database
 
 router = APIRouter(prefix="/seo", tags=["seo"])
@@ -21,7 +22,7 @@ async def sitemap(request: Request) -> Response:
         - 静态页面 (home, search, recommended)
         - 仓库详情页 (动态)
     """
-    base_url = "https://devpulse.app"
+    base_url = settings.API_BASE_URL or "https://devpulse.app"
     today = date.today().isoformat()
 
     entries = [

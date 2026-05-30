@@ -348,6 +348,68 @@ async def get_weekly_report_detail(
 # 仓库详情 + 收藏操作（JWT 关联）
 # ═══════════════════════════════════════════════════════════
 
+@router.get("/{full_name:path}/star-history")
+async def get_star_history(
+    full_name: str,
+    request: Request,
+    period: str = Query("30d", description="统计周期 7d/30d/90d"),
+) -> dict[str, Any]:
+    """获取仓库 Star 历史趋势数据."""
+    db: Database = request.app.state.db
+    async with db.get_session() as session:
+        from datetime import datetime as dt
+        from datetime import timedelta
+
+        from sqlalchemy import select
+
+        from devpulse.core.models import Repository, StarHistory
+
+        repo_result = await session.execute(
+            select(Repository).where(Repository.full_name == full_name)
+        )
+        repo = repo_result.scalar_one_or_none()
+
+        if repo is None:
+            raise HTTPException(status_code=404, detail=f"Repository '{full_name}' not found")
+
+        if period == "7d":
+            delta = timedelta(days=7)
+        elif period == "90d":
+            delta = timedelta(days=90)
+        else:
+            delta = timedelta(days=30)
+
+        since_date = dt.now(timezone.utc) - delta
+
+        stmt = (
+            select(StarHistory)
+            .where(
+                StarHistory.repo_id == repo.id,
+                StarHistory.recorded_at >= since_date,
+            )
+            .order_by(StarHistory.recorded_at.asc())
+        )
+        result = await session.execute(stmt)
+        history_rows = result.scalars().all()
+
+        history = [
+            {
+                "date": row.recorded_at.strftime("%Y-%m-%d"),
+                "stars": row.total_stars,
+            }
+            for row in history_rows
+        ]
+
+        return {
+            "items": [
+                {
+                    "full_name": full_name,
+                    "history": history,
+                }
+            ],
+        }
+
+
 @router.get("/{full_name:path}")
 async def get_repo_detail(
     full_name: str,
@@ -471,68 +533,6 @@ async def unstar_repo(
 
         logger.info("User %d unstarred repo: %s", user_id, full_name)
         return {"message": "Unstarred successfully"}
-
-
-@router.get("/{full_name:path}/star-history")
-async def get_star_history(
-    full_name: str,
-    request: Request,
-    period: str = Query("30d", description="统计周期 7d/30d/90d"),
-) -> dict[str, Any]:
-    """获取仓库 Star 历史趋势数据."""
-    db: Database = request.app.state.db
-    async with db.get_session() as session:
-        from datetime import datetime as dt
-        from datetime import timedelta
-
-        from sqlalchemy import select
-
-        from devpulse.core.models import Repository, StarHistory
-
-        repo_result = await session.execute(
-            select(Repository).where(Repository.full_name == full_name)
-        )
-        repo = repo_result.scalar_one_or_none()
-
-        if repo is None:
-            raise HTTPException(status_code=404, detail=f"Repository '{full_name}' not found")
-
-        if period == "7d":
-            delta = timedelta(days=7)
-        elif period == "90d":
-            delta = timedelta(days=90)
-        else:
-            delta = timedelta(days=30)
-
-        since_date = dt.now(timezone.utc) - delta
-
-        stmt = (
-            select(StarHistory)
-            .where(
-                StarHistory.repo_id == repo.id,
-                StarHistory.recorded_at >= since_date,
-            )
-            .order_by(StarHistory.recorded_at.asc())
-        )
-        result = await session.execute(stmt)
-        history_rows = result.scalars().all()
-
-        history = [
-            {
-                "date": row.recorded_at.strftime("%Y-%m-%d"),
-                "stars": row.total_stars,
-            }
-            for row in history_rows
-        ]
-
-        return {
-            "items": [
-                {
-                    "full_name": full_name,
-                    "history": history,
-                }
-            ],
-        }
 
 
 @router.post("/crawl")

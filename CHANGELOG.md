@@ -4,6 +4,35 @@ All notable changes to DevPulse will be documented in this file.
 
 ---
 
+## [0.5.0] — 2026-05-30 (Quality Hardening)
+
+### Added
+- **Backend Tests**: 72 integration tests across 8 modules (auth, trending, collections, interaction, recommendation, admin, seo, health)
+- **Frontend Tests**: 27 unit/component/store tests (Vitest + React Testing Library)
+- **E2E Tests**: 5 Playwright scenarios (happy-path, i18n, admin, pwa, auth-gate)
+- **Performance**: wrk benchmark script + report template (3 scenarios)
+- **CI Hardening**: Removed `continue-on-error` from frontend test job; added PostgreSQL service container
+- **M6 Reliability Gate**: Formal gate report with regression verification
+- **M8 Quality Audit**: Five-dimension quality audit report
+- **Docker Verification**: Deployment verification checklist
+- **Perf Test Script**: `scripts/perf-test.sh` for automated wrk benchmarking
+
+### Fixed
+- **Routing Bug**: `main.py` repos wildcard route was intercepting interaction/recommendation GET requests — reordered router registration
+- **Routing Bug**: `repos.py` `GET /{full_name:path}/star-history` was unreachable behind wildcard route — moved before wildcard
+- **Missing Dep**: `numpy` not declared in `requirements-docker.txt` (scikit-learn hard dependency)
+- **Hardcoded URL**: `seo.py` base_url now reads from `settings.API_BASE_URL` with fallback
+- **Disconnected UI**: `LanguageSwitcher` component was implemented but never rendered — now mounted in Layout
+- **Stale Docs**: `ARCHITECTURE.md` directory structure updated to match actual codebase
+- **Dep Compatibility**: bcrypt pinned to 4.0.1 (5.0 incompatible with passlib); PyJWT pinned to 2.7.0 (2.13 requires string sub)
+
+### Changed
+- **Test Infrastructure**: pytest conftest with SQLite :memory: + httpx ASGITransport
+- **CI Pipeline**: test.yml now blocks on failure for all jobs
+- **.gitignore**: Added `.pnpm-store/`, `.yarn/`, `.workbuddy/`, `.claude/`, `.codex/`
+
+---
+
 ## [0.4.0] — 2026-06-01 (v1.0.0-rc)
 
 ### Added
